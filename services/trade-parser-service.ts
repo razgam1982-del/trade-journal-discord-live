@@ -19,7 +19,7 @@ const SignalSchema = z.object({
   asset: z.string().nullable(),
   asset_raw: z.string().nullable(),
   direction: z.enum(['long', 'short']).nullable(),
-  action: z.enum(['entry', 'add', 'reduce', 'close', 'stop_update', 'cancel', 'other']).nullable(),
+  action: z.enum(['entry', 'add', 'reduce', 'close', 'stop_update', 'cancel', 'fill', 'other']).nullable(),
   entry_type: z.enum(['immediate', 'trigger', 'limit']).nullable(),
   entry_price: z.number().nullable(),
   risk_percent: z.number().nullable(),
@@ -41,7 +41,7 @@ This channel sizes risk as a PERCENTAGE OF THE PORTFOLIO ("סיכון 0.2 אחו
 
 FIELDS (use null when not present — never invent a value):
 - asset_raw: the asset exactly as written ("זהב", "META", "Xauusd").
-- asset: normalized symbol. זהב/Xauusd → "XAUUSD"; סילבר → "XAGUSD"; ביטקוין → "BTC"; a stock ticker stays uppercase as-is ("META").
+- asset: normalized symbol. זהב/Xauusd → "XAUUSD"; סילבר/Xagusd → "XAGUSD"; ביטקוין/BTCUSD → "BTC"; יפני/JPY225 → "JP225"; נסדק/"חוזה נסדק" → "NQ"; a stock ticker stays uppercase as-is ("META", "AAPL", "TSLA", "QCOM", "INTC", "MSTR").
 - direction: "short" or "long". Explicit: "שורט"→short, "לונג"→long. If not explicit, infer from price geometry: take-profit BELOW the stop/entry ⇒ short; take-profit ABOVE ⇒ long.
 - action:
   - "entry"  — opening a new position (first signal for the asset, or a fresh setup; e.g. has טריגר/כניסה with stop+TP).
@@ -49,7 +49,8 @@ FIELDS (use null when not present — never invent a value):
   - "reduce" — PARTIAL close; the position stays open. Includes "יש להפחית"/"להפחית חצי"/"הפחתה", and also "לסגור עסקה אחרונה" (close only the last leg) and "לסגור עסקאות שנפתחו היום" (close only today's legs). Put the amount/scope in quantity_text ("חצי", "עסקה אחרונה", "של היום").
   - "close"  — FULL close of the ENTIRE position ("לסגור את כל העסקה", "סגירה", or "לסגור כרגע" when the whole position is closed). Do NOT use for partial closes — those are "reduce".
   - "stop_update" — moving the stop on an existing position ("STOP עובר ל 4526", "STOP על כל העסקה עובר ל..."). Put the new stop in stop_price.
-  - "cancel" — cancelling a pending order ("ביטול העסקה").
+  - "cancel" — cancelling a pending order ("ביטול העסקה", "מבוטל", "מבוטלים").
+  - "fill"   — confirming a pending limit/trigger ENTERED ("לימיט נתפס", "לימיט בפנים", "לימיט הופעל", "בפנים", "נכנס"). No new prices; just confirms the prior pending entry filled.
   - "other"  — a trade-related message that fits none of the above.
 - entry_type + entry_price: how the position is entered.
   - "immediate" — "כניסה מיידית" / "כניסה: מיידית". entry_price is the executed price if the user wrote one ("כניסה מיידית 4490"), else null.
@@ -90,6 +91,15 @@ Output: {"is_trade":true,"asset":"XAUUSD","asset_raw":"זהב","direction":null,
 
 Input (full close): "שורט זהב לסגור כרגע. אם יחזור למטה נפתח שוב"
 Output: {"is_trade":true,"asset":"XAUUSD","asset_raw":"זהב","direction":"short","action":"close","entry_type":null,"entry_price":null,"risk_percent":null,"stop_price":null,"tp_price":null,"quantity_text":null,"parser_confidence":0.9,"parser_notes":null}
+
+Input (limit fill confirmation): "לימיט נתפס"
+Output: {"is_trade":true,"asset":null,"asset_raw":null,"direction":null,"action":"fill","entry_type":null,"entry_price":null,"risk_percent":null,"stop_price":null,"tp_price":null,"quantity_text":null,"parser_confidence":0.85,"parser_notes":"אישור שהלימיט נכנס"}
+
+Input (stock long): "AAPL לונג\n\nכניסה מיידית\nסיכון 0.25%\n\nSTOP\n270\n\nTP\n329"
+Output: {"is_trade":true,"asset":"AAPL","asset_raw":"AAPL","direction":"long","action":"entry","entry_type":"immediate","entry_price":null,"risk_percent":0.25,"stop_price":270,"tp_price":329,"quantity_text":null,"parser_confidence":0.95,"parser_notes":null}
+
+Input (Nikkei limit): "יפני JPY225\nלימיט לכניסה ללונג\nמחירי FTMO\nסיכון 0.3% מהתיק\n60100\nSTOP\n59400\nTP\n64500"
+Output: {"is_trade":true,"asset":"JP225","asset_raw":"יפני JPY225","direction":"long","action":"entry","entry_type":"limit","entry_price":60100,"risk_percent":0.3,"stop_price":59400,"tp_price":64500,"quantity_text":null,"parser_confidence":0.9,"parser_notes":null}
 
 Input: "מזכיר לכם את התזה המרכזית שלנו. שוק המניות רותח וכל הכסף מופנה לאפיק הזה."
 Output: {"is_trade":false,"asset":null,"asset_raw":null,"direction":null,"action":null,"entry_type":null,"entry_price":null,"risk_percent":null,"stop_price":null,"tp_price":null,"quantity_text":null,"parser_confidence":0.97,"parser_notes":null}`;

@@ -9,6 +9,7 @@ export type TradeActionKind =
   | 'close'
   | 'stop_update'
   | 'cancel'
+  | 'fill'
   | 'other';
 export type EntryType = 'immediate' | 'trigger' | 'limit';
 
@@ -53,6 +54,7 @@ export interface TradeSignal extends ParsedSignal {
   needs_review: boolean;
   manually_edited: boolean;
   excluded: boolean; // excluded from calculations (still shown)
+  filled: boolean | null; // manual override for limit/trigger fill (null = auto)
   created_at: string;
 }
 
@@ -82,6 +84,8 @@ export interface PositionLeg {
   risk_percent: number | null;
   quantity_text: string | null;
   excluded: boolean;
+  pending: boolean; // limit/trigger entry not yet filled — shown but 0 performance
+  filled_override: boolean | null; // manual fill override from the signal
   raw_content: string;
   discord_url: string | null; // deep link to the source Discord message (live only)
 }
@@ -94,6 +98,7 @@ export interface Position {
   opened_at: string;
   closed_at: string | null;
   legs: PositionLeg[];
+  confirm_dates: string[]; // timestamps that confirm pending entries filled (internal)
   current_stop: number | null; // latest stop (after moves) — current risk
   current_tp: number | null;
   total_risk_percent: number; // sum of included entry legs' portfolio risk

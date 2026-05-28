@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import {
   updateSignalPrice,
   setSignalExcluded,
+  setSignalFilled,
   getSignalById,
   updateSignalFields,
 } from '@/services/trade-signal-service';
@@ -39,6 +40,12 @@ export async function savePortfolioSize(size: number): Promise<void> {
 // Sets the current market price for an asset (marks open positions to market).
 export async function saveMarketPrice(asset: string, price: number | null): Promise<void> {
   await setMarketPrice(asset, price);
+  revalidatePath('/positions');
+}
+
+// Marks a limit/trigger entry as filled / pending (null = auto).
+export async function saveLegFilled(signalId: string, filled: boolean | null): Promise<void> {
+  await setSignalFilled(signalId, filled);
   revalidatePath('/positions');
 }
 

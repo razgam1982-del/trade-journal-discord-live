@@ -40,6 +40,7 @@ function newPosition(
     opened_at: openedAt,
     closed_at: null,
     legs: [],
+    confirm_dates: [],
     current_stop: null,
     current_tp: null,
     total_risk_percent: 0,
@@ -71,14 +72,27 @@ function legFromSignal(
     risk_percent: s.risk_percent,
     quantity_text: s.quantity_text,
     excluded: s.excluded,
+    pending: false, // computed in finalize
+    filled_override: s.filled,
     raw_content: s.message.raw_content,
     discord_url: discordUrl(s),
   };
 }
 
-// Recomputes aggregates that depend only on the (non-excluded) legs.
+// A limit/trigger entry is pending (0 performance) until it's confirmed filled.
+function computePending(leg: PositionLeg, confirmDates: string[]): boolean {
+  if (leg.kind !== 'entry') return false;
+  if (leg.filled_override === true) return false;
+  if (leg.filled_override === false) return true;
+  if (leg.entry_type !== 'limit' && leg.entry_type !== 'trigger') return false; // immediate fills now
+  return !confirmDates.some((d) => d >= leg.date);
+}
+
+// Recomputes aggregates that depend only on the active (non-excluded, non-pending) legs.
 function finalize(pos: Position, portfolioSize: number): void {
-  const entries = pos.legs.filter((l) => l.kind === 'entry' && !l.excluded);
+  for (const leg of pos.legs) leg.pending = computePending(leg, pos.confirm_dates);
+
+  const entries = pos.legs.filter((l) => l.kind === 'entry' && !l.excluded && !l.pending);
   pos.total_risk_percent = entries.reduce((sum, l) => sum + (l.risk_percent ?? 0), 0);
 
   // Interim: weight by risk%. Will switch to FTMO lot sizing once instrument
@@ -133,7 +147,7 @@ function mark(pos: Position, prices: Record<string, number>, portfolioSize: numb
   if (pos.direction !== 'long' && pos.direction !== 'short') return;
   const short = pos.direction === 'short';
 
-  const entries = pos.legs.filter((l) => l.kind === 'entry' && !l.excluded && l.price != null);
+  const entries = pos.legs.filter((l) => l.kind === 'entry' && !l.excluded && !l.pending && l.price != null);
   let pct = 0;
   let counted = false;
   for (const leg of entries) {
@@ -216,6 +230,13 @@ export async function getPositions(channelId?: string): Promise<Position[]> {
     if (s.needs_review) pos.needs_review = true;
     if (s.stop_price != null) pos.current_stop = s.stop_price;
     if (s.tp_price != null) pos.current_tp = s.tp_price;
+
+    // fill / reduce / close / stop_update all confirm that a prior pending
+    // limit/trigger entry actually filled (you can't manage a position that
+    // never entered). 'cancel' does NOT confirm.
+    if (action === 'fill' || action === 'reduce' || action === 'close' || action === 'stop_update') {
+      pos.confirm_dates.push(s.message.created_at);
+    }
 
     if (action === 'reduce') {
       // Partial close (e.g. "לסגור עסקה אחרונה") — position stays open.

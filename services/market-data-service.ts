@@ -4,13 +4,18 @@
 const API = 'https://api.twelvedata.com';
 const KEY = process.env.TWELVEDATA_API_KEY;
 
+// Assets auto-enriched from Twelve Data free tier. Not listed (silver XAG/USD,
+// JP225/Nikkei, NQ/Nasdaq futures) need a paid plan, so they stay manual.
 const ASSET_SYMBOLS: Record<string, string> = {
   XAUUSD: 'XAU/USD',
-  XAGUSD: 'XAG/USD',
   BTC: 'BTC/USD',
   BTCUSD: 'BTC/USD',
   META: 'META',
   MSTR: 'MSTR',
+  AAPL: 'AAPL',
+  TSLA: 'TSLA',
+  QCOM: 'QCOM',
+  INTC: 'INTC',
 };
 
 export interface Candle {

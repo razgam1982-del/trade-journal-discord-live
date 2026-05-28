@@ -95,6 +95,17 @@ export async function updateSignalPrice(
   }
 }
 
+// Manually sets whether a limit/trigger entry filled (null = auto).
+export async function setSignalFilled(signalId: string, filled: boolean | null): Promise<void> {
+  const { error } = await supabaseAdmin
+    .from('trade_signals')
+    .update({ filled })
+    .eq('id', signalId);
+  if (error) {
+    throw new Error(`Failed to update signal: ${error.message}`);
+  }
+}
+
 // Excludes/restores a leg from calculations (still shown in the journal).
 export async function setSignalExcluded(signalId: string, excluded: boolean): Promise<void> {
   const { error } = await supabaseAdmin

@@ -6,6 +6,7 @@ import { EditablePrice } from "./EditablePrice";
 import { ExcludeToggle } from "./ExcludeToggle";
 import { EditSignalButton } from "./EditSignalButton";
 import { EditableCurrentPrice } from "./EditableCurrentPrice";
+import { FilledToggle } from "./FilledToggle";
 
 const GREEN = "#22c55e";
 const RED = "#ef4444";
@@ -86,7 +87,12 @@ function LegsDetail({ p }: { p: Position }) {
         </thead>
         <tbody>
           {p.legs.map((leg) => {
-            const struck = leg.excluded ? { textDecoration: "line-through" as const, opacity: 0.45 } : undefined;
+            const struck = leg.excluded
+              ? { textDecoration: "line-through" as const, opacity: 0.45 }
+              : leg.pending
+                ? { opacity: 0.6 }
+                : undefined;
+            const isLimitEntry = leg.kind === "entry" && (leg.entry_type === "limit" || leg.entry_type === "trigger");
             const detail =
               leg.kind === "entry"
                 ? leg.entry_type
@@ -97,12 +103,18 @@ function LegsDetail({ p }: { p: Position }) {
               <tr key={leg.signal_id}>
                 <td className="border-b border-[var(--border)] px-2 py-1.5 text-[var(--muted)] tabular-nums whitespace-nowrap" style={struck}>{fmtTime(leg.date)}</td>
                 <td className="border-b border-[var(--border)] px-2 py-1.5" style={struck}>{LEG[leg.kind]}</td>
-                <td className="border-b border-[var(--border)] px-2 py-1.5" style={struck}>{detail}</td>
+                <td className="border-b border-[var(--border)] px-2 py-1.5" style={struck}>
+                  {detail}
+                  {leg.pending && (
+                    <span className="ms-2 rounded px-1.5 py-0.5 text-[10px]" style={{ background: "rgba(245,158,11,0.15)", color: "var(--gold)" }}>ממתין</span>
+                  )}
+                </td>
                 <td className="border-b border-[var(--border)] px-1 py-1" style={struck}>
                   {leg.kind === "cancel" ? <span className="px-2 text-[var(--muted)]">—</span> : <EditablePrice signalId={leg.signal_id} kind={leg.kind} value={leg.price} />}
                 </td>
                 <td className="border-b border-[var(--border)] px-2 py-1.5 tabular-nums" style={struck}>{leg.risk_percent != null ? `${leg.risk_percent}%` : "—"}</td>
                 <td className="border-b border-[var(--border)] px-1 py-1 text-left whitespace-nowrap">
+                  {isLimitEntry && <FilledToggle signalId={leg.signal_id} pending={leg.pending} />}
                   {leg.discord_url && (
                     <a href={leg.discord_url} target="_blank" rel="noopener noreferrer" className="rounded px-2 py-1 text-xs" style={{ color: ACCENT }} title="פתח בדיסקורד">↗</a>
                   )}
