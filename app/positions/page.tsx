@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getPositions } from "@/services/position-service";
 import { getPortfolioSize } from "@/services/settings-service";
+import { listChannels } from "@/services/channel-service";
 import { EditablePortfolioSize } from "@/components/EditablePortfolioSize";
 import { PositionsCharts } from "@/components/PositionsCharts";
 import { PositionsTable } from "@/components/PositionsTable";
@@ -34,8 +35,16 @@ function Kpi({ label, value, sub, color }: { label: string; value: string; sub?:
   );
 }
 
-export default async function PositionsPage() {
-  const [positions, portfolioSize] = await Promise.all([getPositions(), getPortfolioSize()]);
+export default async function PositionsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ channel?: string }>;
+}) {
+  const { channel } = await searchParams;
+  const channels = await listChannels();
+  const selected =
+    channel && channels.some((c) => c.channel_id === channel) ? channel : channels[0]?.channel_id;
+  const [positions, portfolioSize] = await Promise.all([getPositions(selected), getPortfolioSize()]);
 
   const openPositions = positions.filter((p) => p.status === "open");
   const openCount = openPositions.length;
@@ -99,7 +108,10 @@ export default async function PositionsPage() {
         <div>
           <h1 className="text-2xl font-bold">יומן מסחר — דיסקורד לייב</h1>
           <p className="mt-1 text-sm text-[var(--muted)]">
-            עסקאות מסונכרנות מהדיסקורד · רווח/הפסד ב-R ובאחוז מהתיק ·{" "}
+            <Link href="/" className="underline" style={{ color: "var(--accent)" }}>
+              ← כל היומנים
+            </Link>{" "}
+            · רווח/הפסד ב-R ובאחוז מהתיק ·{" "}
             <Link href="/journal" className="underline" style={{ color: "var(--accent)" }}>
               סיגנלים גולמיים
             </Link>
@@ -114,6 +126,25 @@ export default async function PositionsPage() {
           </div>
         </div>
       </header>
+
+      {channels.length > 1 && (
+        <div className="mb-5 flex flex-wrap gap-2">
+          {channels.map((c) => (
+            <Link
+              key={c.channel_id}
+              href={`/positions?channel=${c.channel_id}`}
+              className="rounded-lg border px-3 py-1.5 text-sm font-medium"
+              style={
+                c.channel_id === selected
+                  ? { background: "var(--accent)", color: "#03131f", borderColor: "var(--accent)" }
+                  : { borderColor: "var(--border)", color: "var(--muted)" }
+              }
+            >
+              {c.name}
+            </Link>
+          ))}
+        </div>
+      )}
 
       <div className="mb-6 flex items-start gap-3 rounded-xl border px-4 py-3 text-sm leading-relaxed" style={{ background: "linear-gradient(135deg, rgba(245,158,11,0.12), rgba(245,158,11,0.05))", borderColor: "rgba(245,158,11,0.35)", color: "#fde68a" }}>
         <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-base font-extrabold" style={{ background: "rgba(245,158,11,0.25)", color: "var(--gold)" }}>!</span>

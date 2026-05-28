@@ -152,8 +152,11 @@ function mark(pos: Position, prices: Record<string, number>, portfolioSize: numb
 
 // Groups trade signals into positions. Source of truth stays in trade_signals;
 // positions are derived here and can always be recomputed.
-export async function getPositions(): Promise<Position[]> {
-  const signals = await listTradeSignals(1000);
+export async function getPositions(channelId?: string): Promise<Position[]> {
+  const allSignals = await listTradeSignals(1000);
+  const signals = channelId
+    ? allSignals.filter((s) => s.message.channel_id === channelId)
+    : allSignals;
   // Chronological order (listTradeSignals returns newest-first).
   const chrono = [...signals].reverse();
 
