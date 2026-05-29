@@ -64,6 +64,7 @@ export interface TradeSignal extends ParsedSignal {
   manually_edited: boolean;
   excluded: boolean; // excluded from calculations (still shown)
   filled: boolean | null; // manual override for limit/trigger fill (null = auto)
+  deleted_at: string | null; // soft delete — hidden from the journal, recoverable
   created_at: string;
 }
 
@@ -99,11 +100,12 @@ export interface StockTrade {
   entries: StockLeg[];
   exits: StockLeg[];
   seq: number; // display order
+  deleted_at: string | null; // soft delete — hidden from the journal, recoverable
   created_at: string;
 }
 
 // New/edited trade payload (no id/created_at).
-export type StockTradeInput = Omit<StockTrade, 'id' | 'created_at' | 'channel_id'> & {
+export type StockTradeInput = Omit<StockTrade, 'id' | 'created_at' | 'channel_id' | 'deleted_at'> & {
   channel_id?: string;
 };
 

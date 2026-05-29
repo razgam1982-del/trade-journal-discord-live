@@ -169,12 +169,52 @@ export async function setSignalExcluded(signalId: string, excluded: boolean): Pr
   }
 }
 
+// Soft-deletes signals (one leg, or all legs of a position). Hidden from the
+// journal but recoverable from the owner-only recycle bin.
+export async function softDeleteSignals(ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+  const { error } = await supabaseAdmin
+    .from('trade_signals')
+    .update({ deleted_at: new Date().toISOString() })
+    .in('id', ids);
+  if (error) {
+    throw new Error(`Failed to delete signals: ${error.message}`);
+  }
+}
+
+// Restores soft-deleted signals back into the journal.
+export async function restoreSignals(ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+  const { error } = await supabaseAdmin
+    .from('trade_signals')
+    .update({ deleted_at: null })
+    .in('id', ids);
+  if (error) {
+    throw new Error(`Failed to restore signals: ${error.message}`);
+  }
+}
+
+// Soft-deleted trade legs (for the recycle bin), most-recently-deleted first.
+export async function listDeletedSignals(): Promise<TradeSignalWithMessage[]> {
+  const { data, error } = await supabaseAdmin
+    .from('trade_signals')
+    .select('*, message:discord_messages(raw_content, author, channel_name, created_at, discord_message_id, channel_id)')
+    .eq('is_trade', true)
+    .not('deleted_at', 'is', null);
+  if (error) {
+    throw new Error(`Failed to list deleted signals: ${error.message}`);
+  }
+  const rows = (data ?? []) as unknown as TradeSignalWithMessage[];
+  return rows.sort((a, b) => (b.deleted_at ?? '').localeCompare(a.deleted_at ?? ''));
+}
+
 // Trade signals (is_trade = true) joined with their source message, newest first.
 export async function listTradeSignals(limit = 200): Promise<TradeSignalWithMessage[]> {
   const { data, error } = await supabaseAdmin
     .from('trade_signals')
     .select('*, message:discord_messages(raw_content, author, channel_name, created_at, discord_message_id, channel_id)')
     .eq('is_trade', true)
+    .is('deleted_at', null)
     .limit(limit);
 
   if (error) {

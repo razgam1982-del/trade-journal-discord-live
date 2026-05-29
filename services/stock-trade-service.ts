@@ -11,10 +11,25 @@ export async function listStockTrades(channelId: string = STOCKS_CHANNEL): Promi
     .from('stock_trades')
     .select('*')
     .eq('channel_id', channelId)
+    .is('deleted_at', null)
     .order('seq', { ascending: true })
     .order('trade_date', { ascending: true });
   if (error) {
     throw new Error(`Failed to list stock trades: ${error.message}`);
+  }
+  return (data ?? []) as StockTrade[];
+}
+
+// Soft-deleted stock trades (for the recycle bin), most-recently-deleted first.
+export async function listDeletedStockTrades(channelId: string = STOCKS_CHANNEL): Promise<StockTrade[]> {
+  const { data, error } = await supabaseAdmin
+    .from('stock_trades')
+    .select('*')
+    .eq('channel_id', channelId)
+    .not('deleted_at', 'is', null)
+    .order('deleted_at', { ascending: false });
+  if (error) {
+    throw new Error(`Failed to list deleted stock trades: ${error.message}`);
   }
   return (data ?? []) as StockTrade[];
 }
@@ -66,9 +81,23 @@ export async function updateStockTrade(id: string, input: StockTradeInput): Prom
   }
 }
 
+// Soft delete — recoverable from the recycle bin (never hard-deletes).
 export async function deleteStockTrade(id: string): Promise<void> {
-  const { error } = await supabaseAdmin.from('stock_trades').delete().eq('id', id);
+  const { error } = await supabaseAdmin
+    .from('stock_trades')
+    .update({ deleted_at: new Date().toISOString() })
+    .eq('id', id);
   if (error) {
     throw new Error(`Failed to delete stock trade: ${error.message}`);
+  }
+}
+
+export async function restoreStockTrade(id: string): Promise<void> {
+  const { error } = await supabaseAdmin
+    .from('stock_trades')
+    .update({ deleted_at: null })
+    .eq('id', id);
+  if (error) {
+    throw new Error(`Failed to restore stock trade: ${error.message}`);
   }
 }

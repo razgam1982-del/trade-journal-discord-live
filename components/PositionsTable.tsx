@@ -7,6 +7,8 @@ import { ExcludeToggle } from "./ExcludeToggle";
 import { EditSignalButton } from "./EditSignalButton";
 import { EditableCurrentPrice } from "./EditableCurrentPrice";
 import { FilledToggle } from "./FilledToggle";
+import { DeleteButton } from "./DeleteButton";
+import { deleteSignal, deletePosition } from "@/app/positions/actions";
 
 const GREEN = "#22c55e";
 const RED = "#ef4444";
@@ -61,6 +63,9 @@ function LegsDetail({ p }: { p: Position }) {
   const totalR = p.r_achieved != null || p.unrealized_r != null ? (p.r_achieved ?? 0) + (p.unrealized_r ?? 0) : null;
   return (
     <div className="bg-[var(--panel-2)] p-3">
+      <div className="mb-2 flex justify-end">
+        <DeleteButton onConfirm={() => deletePosition(p.legs.map((l) => l.signal_id))} title="מחק את כל העסקה" label="מחק עסקה שלמה" />
+      </div>
       <div className="mb-3 flex flex-col gap-1 text-sm tabular-nums">
         <div className="font-semibold">
           <span className="text-[var(--muted)]">רווח/הפסד ממומש</span>
@@ -193,6 +198,7 @@ function LegsDetail({ p }: { p: Position }) {
                   )}
                   <EditSignalButton signalId={leg.signal_id} />
                   <ExcludeToggle signalId={leg.signal_id} excluded={leg.excluded} />
+                  <DeleteButton onConfirm={() => deleteSignal(leg.signal_id)} title="מחק שורה זו" />
                 </td>
               </tr>
               {leg.kind === "entry" && leg.closes.map((c, ci) => (

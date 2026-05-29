@@ -7,6 +7,8 @@ import {
   setSignalFilled,
   getSignalById,
   updateSignalFields,
+  softDeleteSignals,
+  restoreSignals,
 } from '@/services/trade-signal-service';
 import { setMarketPrice } from '@/services/market-price-service';
 import { setPortfolioSize } from '@/services/settings-service';
@@ -67,5 +69,26 @@ export async function saveSignalEdits(
 ): Promise<void> {
   await assertEditor();
   await updateSignalFields(id, fields);
+  revalidatePath('/positions');
+}
+
+// Soft-deletes a single leg (one signal). Recoverable from the recycle bin.
+export async function deleteSignal(id: string): Promise<void> {
+  await assertEditor();
+  await softDeleteSignals([id]);
+  revalidatePath('/positions');
+}
+
+// Soft-deletes a whole position (all its leg signals).
+export async function deletePosition(signalIds: string[]): Promise<void> {
+  await assertEditor();
+  await softDeleteSignals(signalIds);
+  revalidatePath('/positions');
+}
+
+// Restores soft-deleted legs back into the journal.
+export async function restoreSignal(id: string): Promise<void> {
+  await assertEditor();
+  await restoreSignals([id]);
   revalidatePath('/positions');
 }

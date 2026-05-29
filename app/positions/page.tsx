@@ -2,14 +2,24 @@ import Link from "next/link";
 import { getPositions } from "@/services/position-service";
 import { getPortfolioSize } from "@/services/settings-service";
 import { listChannels } from "@/services/channel-service";
-import { listStockTrades } from "@/services/stock-trade-service";
+import { listStockTrades, listDeletedStockTrades } from "@/services/stock-trade-service";
+import { listDeletedSignals } from "@/services/trade-signal-service";
+import { restoreSignal } from "@/app/positions/actions";
+import { restoreStockTradeAction } from "@/app/stocks/actions";
 import { EditablePortfolioSize } from "@/components/EditablePortfolioSize";
 import { PositionsCharts } from "@/components/PositionsCharts";
 import { PositionsTable } from "@/components/PositionsTable";
 import { StockJournal } from "@/components/StockJournal";
+import { RecycleBin } from "@/components/RecycleBin";
 import { Disclaimer } from "@/components/Disclaimer";
 import { EditModeProvider } from "@/components/EditMode";
 import { isEditor } from "@/lib/edit-auth";
+
+const DIR_HE: Record<string, string> = { long: "לונג", short: "שורט" };
+const ACTION_HE: Record<string, string> = {
+  entry: "כניסה", add: "הוספה", reduce: "הפחתה", close: "סגירה",
+  stop_update: "עדכון סטופ", cancel: "ביטול", fill: "מילוי", other: "אחר",
+};
 
 function ChannelTabs({ channels, selected }: { channels: { channel_id: string; name: string }[]; selected?: string }) {
   if (channels.length <= 1) return null;
@@ -77,6 +87,7 @@ export default async function PositionsPage({
   // The stocks channel uses a separate shares/price/fees journal.
   if (selectedChannel?.template === "momentum_stocks") {
     const trades = await listStockTrades(selected);
+    const deletedTrades = canEdit ? await listDeletedStockTrades(selected) : [];
     return (
       <EditModeProvider canEdit={canEdit}>
       <main className="mx-auto w-full max-w-[1320px] px-6 py-8">
@@ -90,12 +101,22 @@ export default async function PositionsPage({
         <ChannelTabs channels={channels} selected={selected} />
         <Disclaimer />
         <StockJournal trades={trades} />
+        <RecycleBin
+          heading="סל מיחזור — עסקאות שנמחקו"
+          items={deletedTrades.map((t) => ({
+            id: t.id,
+            title: `${t.symbol} · ${DIR_HE[t.direction]}`,
+            sub: `${t.trade_date} · סיכון $${t.risk_dollars}`,
+          }))}
+          onRestore={restoreStockTradeAction}
+        />
       </main>
       </EditModeProvider>
     );
   }
 
   const [positions, portfolioSize] = await Promise.all([getPositions(selected), getPortfolioSize()]);
+  const deletedSignals = canEdit ? await listDeletedSignals() : [];
 
   const openPositions = positions.filter((p) => p.status === "open");
   const openCount = openPositions.length;
@@ -220,6 +241,15 @@ export default async function PositionsPage({
       <section>
         <h2 className="mb-3 text-base font-semibold">פירוט עסקאות <span className="text-xs font-normal text-[var(--muted)]">· לחץ על שורה לפתיחת הרגליים</span></h2>
         <PositionsTable positions={positions} />
+        <RecycleBin
+          heading="סל מיחזור — שורות שנמחקו"
+          items={deletedSignals.map((s) => ({
+            id: s.id,
+            title: `${s.asset ?? s.asset_raw ?? "—"}${s.direction ? ` · ${DIR_HE[s.direction]}` : ""} · ${ACTION_HE[s.action ?? "other"] ?? s.action}`,
+            sub: `${shortDate(s.message.created_at)} · ${s.message.raw_content.replace(/\s+/g, " ").slice(0, 70)}`,
+          }))}
+          onRestore={restoreSignal}
+        />
       </section>
     </main>
     </EditModeProvider>

@@ -5,6 +5,7 @@ import {
   createStockTrade,
   updateStockTrade,
   deleteStockTrade,
+  restoreStockTrade,
 } from '@/services/stock-trade-service';
 import { assertEditor } from '@/lib/edit-auth';
 import type { StockTradeInput } from '@/types';
@@ -24,6 +25,13 @@ export async function saveStockTrade(id: string | null, input: StockTradeInput):
 export async function removeStockTrade(id: string): Promise<void> {
   await assertEditor();
   await deleteStockTrade(id);
+  revalidatePath('/positions');
+  revalidatePath('/');
+}
+
+export async function restoreStockTradeAction(id: string): Promise<void> {
+  await assertEditor();
+  await restoreStockTrade(id);
   revalidatePath('/positions');
   revalidatePath('/');
 }
