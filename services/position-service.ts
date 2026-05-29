@@ -207,6 +207,14 @@ function finalize(pos: Position, portfolioSize: number): void {
     pos.pnl_dollars = (realized / 100) * portfolioSize;
     pos.r_achieved = pos.total_risk_percent > 0 ? realized / pos.total_risk_percent : null;
   }
+
+  // Once the whole position is realized (via reduces/scale-outs), it's closed —
+  // even without an explicit "close" action. Otherwise it lingers as falsely "open".
+  if (pos.status === 'open' && pos.closed_fraction >= 0.999) {
+    pos.status = 'closed';
+    const lastExit = exitLegs.reduce((d, l) => (l.date > d ? l.date : d), pos.closed_at ?? '');
+    if (lastExit) pos.closed_at = lastExit;
+  }
 }
 
 // The fraction of the WHOLE position an exit leg closes: explicit close_percent,
