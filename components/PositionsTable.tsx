@@ -262,11 +262,11 @@ export function PositionsTable({ positions }: { positions: Position[] }) {
           // One bordered box per trade so it's clear all the data belongs together.
           <div key={key} className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--panel)]" style={{ boxShadow: `inset 4px 0 0 0 ${border}` }}>
             {/* Top line: identity + prices on the right, status + delete on the left. */}
-            <div className="flex items-start justify-between gap-3 px-4 py-3">
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm tabular-nums">
-                <span className="text-xs text-[var(--muted)]">#{i + 1}</span>
-                <span className="text-xs text-[var(--muted)]">{fmtDate(p.opened_at)}</span>
-                <span className="text-base font-bold">{p.asset}</span>
+            <div className="flex items-start justify-between gap-4 px-5 py-4">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-base tabular-nums">
+                <span className="text-sm text-[var(--muted)]">#{i + 1}</span>
+                <span className="text-sm text-[var(--muted)]">{fmtDate(p.opened_at)}</span>
+                <span className="text-xl font-bold">{p.asset}</span>
                 {p.needs_review && <span className="text-[10px]" style={{ color: "var(--gold)" }} title="דורש בדיקה">⚠</span>}
                 <span className="font-semibold" style={{ color: p.direction === "long" ? GREEN : p.direction === "short" ? RED : "var(--muted)" }}>{DIR[p.direction]}</span>
                 <span style={{ color: "var(--border)" }}>|</span>
@@ -281,8 +281,8 @@ export function PositionsTable({ positions }: { positions: Position[] }) {
                 <span><span className="text-[var(--muted)]">סיכון: </span>{p.total_risk_percent.toFixed(2)}%</span>
               </div>
               <div className="flex shrink-0 flex-wrap items-center justify-end gap-x-3 gap-y-1">
-                <div className="flex items-center gap-2 text-sm font-bold tabular-nums">
-                  <span className="text-[10px] font-normal text-[var(--muted)]">סך הכל</span>
+                <div className="flex items-center gap-2 text-base font-bold tabular-nums">
+                  <span className="text-xs font-normal text-[var(--muted)]">סך הכל</span>
                   <span style={{ color: plColor(total$) }}>{total$ != null ? money(total$) : "—"}</span>
                   <span className="font-normal text-[var(--muted)]">·</span>
                   <span style={{ color: plColor(totalPct) }}>{totalPct != null ? pct(totalPct) : "—"}</span>
