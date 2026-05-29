@@ -54,6 +54,11 @@ function newPosition(
     unrealized_pnl_percent: null,
     unrealized_pnl_dollars: null,
     unrealized_r: null,
+    potential_profit_percent: null,
+    potential_profit_dollars: null,
+    potential_loss_percent: null,
+    potential_loss_dollars: null,
+    potential_rr: null,
     needs_review: false,
   };
 }
@@ -265,6 +270,38 @@ function mark(pos: Position, prices: Record<string, number>, portfolioSize: numb
   pos.unrealized_r = pos.total_risk_percent > 0 ? pct / pos.total_risk_percent : null;
 }
 
+// Forward-looking potential on the still-open portion: profit if it reaches the
+// take-profit, loss if it hits each leg's stop, and the reward/risk ratio.
+// Only meaningful for an open position that has a TP set.
+function computePotential(pos: Position, portfolioSize: number): void {
+  if (pos.status !== 'open' || pos.current_tp == null) return;
+  if (pos.direction !== 'long' && pos.direction !== 'short') return;
+  const short = pos.direction === 'short';
+  const tp = pos.current_tp;
+
+  let profitPct = 0;
+  let lossPct = 0;
+  let counted = false;
+  for (const leg of pos.legs) {
+    if (leg.kind !== 'entry' || leg.excluded || leg.pending) continue;
+    const rem = leg.remaining ?? 1;
+    if (rem <= 1e-9 || leg.price == null || leg.stop == null || leg.risk_percent == null) continue;
+    const riskDist = short ? leg.stop - leg.price : leg.price - leg.stop;
+    if (riskDist <= 0) continue;
+    const reward = short ? leg.price - tp : tp - leg.price;
+    profitPct += rem * (reward / riskDist) * leg.risk_percent;
+    lossPct += rem * leg.risk_percent; // risk_percent IS the loss if the stop hits
+    counted = true;
+  }
+  if (!counted) return;
+
+  pos.potential_profit_percent = profitPct;
+  pos.potential_profit_dollars = (profitPct / 100) * portfolioSize;
+  pos.potential_loss_percent = -lossPct;
+  pos.potential_loss_dollars = -(lossPct / 100) * portfolioSize;
+  pos.potential_rr = lossPct > 0 ? profitPct / lossPct : null;
+}
+
 // Groups trade signals into positions. Source of truth stays in trade_signals;
 // positions are derived here and can always be recomputed.
 export async function getPositions(channelId?: string): Promise<Position[]> {
@@ -360,6 +397,7 @@ export async function getPositions(channelId?: string): Promise<Position[]> {
   for (const pos of all) {
     finalize(pos, portfolioSize);
     mark(pos, prices, portfolioSize);
+    computePotential(pos, portfolioSize);
   }
 
   // Newest positions first.

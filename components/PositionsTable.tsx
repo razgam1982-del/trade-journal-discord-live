@@ -93,6 +93,29 @@ function LegsDetail({ p }: { p: Position }) {
           <div><span className="text-[var(--muted)]">תשואה %: </span><span style={{ color: plColor(totalPct) }}>{totalPct != null ? pct(totalPct) : "—"}</span></div>
           <div><span className="text-[var(--muted)]">יחס סיכון (R): </span><span style={{ color: plColor(totalR) }}>{totalR != null ? `${totalR.toFixed(2)}R` : "—"}</span></div>
         </div>
+        {p.potential_rr != null && (
+          <>
+            <div className="mt-1 border-t border-[var(--border)] pt-1 font-semibold text-[var(--muted)]">פוטנציאל עסקה (עד הטייק־פרופיט, על החלק הפתוח)</div>
+            <div className="ms-3 flex flex-col gap-0.5">
+              <div>
+                <span className="text-[var(--muted)]">רווח פוטנציאלי: </span>
+                <span className="font-semibold" style={{ color: GREEN }}>{p.potential_profit_dollars != null ? money(p.potential_profit_dollars) : "—"}</span>
+                <span className="text-[var(--muted)]"> · </span>
+                <span style={{ color: GREEN }}>{p.potential_profit_percent != null ? pct(p.potential_profit_percent) : "—"}</span>
+              </div>
+              <div>
+                <span className="text-[var(--muted)]">הפסד פוטנציאלי: </span>
+                <span className="font-semibold" style={{ color: RED }}>{p.potential_loss_dollars != null ? money(p.potential_loss_dollars) : "—"}</span>
+                <span className="text-[var(--muted)]"> · </span>
+                <span style={{ color: RED }}>{p.potential_loss_percent != null ? pct(p.potential_loss_percent) : "—"}</span>
+              </div>
+              <div>
+                <span className="text-[var(--muted)]">יחס סיכוי/סיכון: </span>
+                <span className="font-bold">{`1:${p.potential_rr.toFixed(2)}`}</span>
+              </div>
+            </div>
+          </>
+        )}
       </div>
       <table className="w-full border-separate border-spacing-0 text-sm">
         <thead>
@@ -275,7 +298,30 @@ export function PositionsTable({ positions }: { positions: Position[] }) {
                     {p.status === "open" ? <EditableCurrentPrice asset={p.asset} value={p.current_price} /> : "—"}
                   </td>
                   <td className={`${TD} tabular-nums`}>{p.total_risk_percent.toFixed(2)}%</td>
-                  <td className={`${TD} tabular-nums`} style={{ color: plColor(totalR) }}>{totalR != null ? `${totalR.toFixed(2)}R` : "—"}</td>
+                  <td className={`${TD} tabular-nums`}>
+                    {!hasR ? (
+                      "—"
+                    ) : (
+                      <div className="flex flex-col gap-0.5 text-xs leading-tight">
+                        <div>
+                          <span className="text-[var(--muted)]">מומש </span>
+                          <span style={{ color: plColor(p.r_achieved) }}>{p.r_achieved != null ? `${p.r_achieved.toFixed(2)}R` : "—"}</span>
+                        </div>
+                        {p.unrealized_r != null && (
+                          <>
+                            <div>
+                              <span className="text-[var(--muted)]">פתוח </span>
+                              <span style={{ color: plColor(p.unrealized_r) }}>{`${p.unrealized_r.toFixed(2)}R`}</span>
+                            </div>
+                            <div className="border-t border-[var(--border)] pt-0.5">
+                              <span className="text-[var(--muted)]">סך </span>
+                              <span className="font-bold" style={{ color: plColor(totalR) }}>{totalR != null ? `${totalR.toFixed(2)}R` : "—"}</span>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </td>
                   <td className={`${TD} tabular-nums font-semibold`} style={{ color: plColor(realized$) }}>{realized$ != null ? money(realized$) : "—"}</td>
                   <td className={`${TD} tabular-nums font-semibold`} style={{ color: plColor(open$) }}>{open$ != null ? money(open$) : "—"}</td>
                   <td className={`${TD} tabular-nums font-bold`} style={{ color: plColor(total$) }}>{total$ != null ? money(total$) : "—"}</td>

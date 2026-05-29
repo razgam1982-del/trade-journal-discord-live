@@ -182,5 +182,12 @@ export interface Position {
   unrealized_pnl_percent: number | null;
   unrealized_pnl_dollars: number | null;
   unrealized_r: number | null;
+  // Forward-looking potential on the still-open portion, vs the take-profit and
+  // each leg's stop. Null when there's no TP or no open portion.
+  potential_profit_percent: number | null;
+  potential_profit_dollars: number | null;
+  potential_loss_percent: number | null; // negative
+  potential_loss_dollars: number | null; // negative
+  potential_rr: number | null; // reward / risk (סיכוי/סיכון)
   needs_review: boolean;
 }
