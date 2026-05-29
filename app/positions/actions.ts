@@ -10,6 +10,7 @@ import {
 } from '@/services/trade-signal-service';
 import { setMarketPrice } from '@/services/market-price-service';
 import { setPortfolioSize } from '@/services/settings-service';
+import { assertEditor } from '@/lib/edit-auth';
 import type { TradeSignal } from '@/types';
 
 // Saves a manually-entered leg price. Entry legs write entry_price; exit
@@ -19,6 +20,7 @@ export async function saveLegPrice(
   kind: string,
   value: number | null,
 ): Promise<void> {
+  await assertEditor();
   const field = kind === 'entry' ? 'entry_price' : 'exit_price';
   await updateSignalPrice(signalId, field, value);
   revalidatePath('/positions');
@@ -26,12 +28,14 @@ export async function saveLegPrice(
 
 // Exclude/restore a leg from the position's calculations.
 export async function toggleLegExcluded(signalId: string, excluded: boolean): Promise<void> {
+  await assertEditor();
   await setSignalExcluded(signalId, excluded);
   revalidatePath('/positions');
 }
 
 // Updates the portfolio size used to convert % into dollars.
 export async function savePortfolioSize(size: number): Promise<void> {
+  await assertEditor();
   if (!Number.isFinite(size) || size <= 0) return;
   await setPortfolioSize(size);
   revalidatePath('/positions');
@@ -39,12 +43,14 @@ export async function savePortfolioSize(size: number): Promise<void> {
 
 // Sets the current market price for an asset (marks open positions to market).
 export async function saveMarketPrice(asset: string, price: number | null): Promise<void> {
+  await assertEditor();
   await setMarketPrice(asset, price);
   revalidatePath('/positions');
 }
 
 // Marks a limit/trigger entry as filled / pending (null = auto).
 export async function saveLegFilled(signalId: string, filled: boolean | null): Promise<void> {
+  await assertEditor();
   await setSignalFilled(signalId, filled);
   revalidatePath('/positions');
 }
@@ -59,6 +65,7 @@ export async function saveSignalEdits(
   id: string,
   fields: Record<string, string | number | null>,
 ): Promise<void> {
+  await assertEditor();
   await updateSignalFields(id, fields);
   revalidatePath('/positions');
 }
