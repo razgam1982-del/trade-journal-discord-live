@@ -229,13 +229,22 @@ export default async function PositionsPage({
         {/* ימין — ביצועים (כל השאר) */}
         <div className="rounded-2xl border-2 border-[var(--border)] p-4 lg:flex-[2]">
           <h3 className="mb-3 text-sm font-bold text-[var(--muted)]">ביצועים</h3>
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-            <Kpi label="סך רווח/הפסד ממומש" value={realized.length ? money(totalPnl) : "—"} sub={realized.length ? `ממוצע לעסקה: ${money(avgPnl)} · ${pct(totalPnlPct)}` : "מלא מחירי יציאה"} color={pnlColor(realized.length ? totalPnl : null)} />
-            <Kpi label="רווח פתוח על השולחן" value={hasUnrealized ? money(openUnrealized) : "—"} sub="רווח/הפסד פתוח · לפי מחיר נוכחי" color={pnlColor(hasUnrealized ? openUnrealized : null)} />
-            <Kpi label="ממוצע עסקה מרוויחה" value={wins.length ? money(avgWin) : "—"} sub={`סה״כ רווחים: ${money(sumWins)}`} color={wins.length ? "var(--green)" : undefined} />
-            <Kpi label="ממוצע עסקה מפסידה" value={losses.length ? money(avgLoss) : "—"} sub={`סה״כ הפסדים: ${money(sumLosses)}`} color={losses.length ? "var(--red)" : undefined} />
-            <Kpi label="העסקה הטובה ביותר" value={best ? money(best.pnl_dollars) : "—"} sub={best ? `${best.asset}${r(best)}` : "—"} color={best ? "var(--green)" : undefined} />
-            <Kpi label="העסקה הגרועה ביותר" value={worst ? money(worst.pnl_dollars) : "—"} sub={worst ? `${worst.asset}${r(worst)}` : "—"} color={worst ? "var(--red)" : undefined} />
+          <div className="flex flex-col gap-4">
+            {/* זוג: רווח/הפסד ממומש ↔ פתוח */}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Kpi label="סך רווח/הפסד ממומש" value={realized.length ? money(totalPnl) : "—"} sub={realized.length ? `ממוצע לעסקה: ${money(avgPnl)} · ${pct(totalPnlPct)}` : "מלא מחירי יציאה"} color={pnlColor(realized.length ? totalPnl : null)} />
+              <Kpi label="רווח פתוח על השולחן" value={hasUnrealized ? money(openUnrealized) : "—"} sub="רווח/הפסד פתוח · לפי מחיר נוכחי" color={pnlColor(hasUnrealized ? openUnrealized : null)} />
+            </div>
+            {/* זוג: ממוצע עסקה מרוויחה ↔ מפסידה */}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Kpi label="ממוצע עסקה מרוויחה" value={wins.length ? money(avgWin) : "—"} sub={`סה״כ רווחים: ${money(sumWins)}`} color={wins.length ? "var(--green)" : undefined} />
+              <Kpi label="ממוצע עסקה מפסידה" value={losses.length ? money(avgLoss) : "—"} sub={`סה״כ הפסדים: ${money(sumLosses)}`} color={losses.length ? "var(--red)" : undefined} />
+            </div>
+            {/* זוג: העסקה הטובה ↔ הגרועה ביותר */}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Kpi label="העסקה הטובה ביותר" value={best ? money(best.pnl_dollars) : "—"} sub={best ? `${best.asset}${r(best)}` : "—"} color={best ? "var(--green)" : undefined} />
+              <Kpi label="העסקה הגרועה ביותר" value={worst ? money(worst.pnl_dollars) : "—"} sub={worst ? `${worst.asset}${r(worst)}` : "—"} color={worst ? "var(--red)" : undefined} />
+            </div>
           </div>
         </div>
 
