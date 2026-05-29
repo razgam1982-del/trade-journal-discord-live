@@ -169,6 +169,10 @@ export interface Position {
   opened_at: string;
   closed_at: string | null;
   legs: PositionLeg[];
+  // Every source signal grouped into this position (entries, reduces, closes,
+  // cancels, stop-updates, fills...). Used to soft-delete the whole trade —
+  // including management signals that don't render as legs.
+  signal_ids: string[];
   closed_fraction: number; // 0..1 — share of the position realized via exits
   confirm_dates: string[]; // timestamps that confirm pending entries filled (internal)
   current_stop: number | null; // latest stop (after moves) — current risk

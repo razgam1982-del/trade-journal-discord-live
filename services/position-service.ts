@@ -40,6 +40,7 @@ function newPosition(
     opened_at: openedAt,
     closed_at: null,
     legs: [],
+    signal_ids: [],
     closed_fraction: 0,
     confirm_dates: [],
     current_stop: null,
@@ -342,6 +343,7 @@ export async function getPositions(channelId?: string): Promise<Position[]> {
         all.push(pos);
       }
       pos.legs.push(legFromSignal(s, 'entry'));
+      pos.signal_ids.push(s.id);
       if (s.stop_price != null) pos.current_stop = s.stop_price;
       if (s.tp_price != null) pos.current_tp = s.tp_price;
       if (s.needs_review) pos.needs_review = true;
@@ -366,6 +368,7 @@ export async function getPositions(channelId?: string): Promise<Position[]> {
     }
 
     if (s.needs_review) pos.needs_review = true;
+    pos.signal_ids.push(s.id);
     if (s.stop_price != null) pos.current_stop = s.stop_price;
     if (s.tp_price != null) pos.current_tp = s.tp_price;
 

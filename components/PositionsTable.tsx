@@ -258,8 +258,8 @@ export function PositionsTable({ positions }: { positions: Position[] }) {
         return (
           // One bordered box per trade so it's clear all the data belongs together.
           <div key={key} className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--panel)]" style={{ boxShadow: `inset 4px 0 0 0 ${border}` }}>
-            {/* Identity + actions. Clicking the header toggles the per-leg breakdown. */}
-            <div className="flex cursor-pointer items-center justify-between gap-3 px-4 py-3 hover:bg-[rgba(56,189,248,0.04)]" onClick={() => toggle(key)}>
+            {/* Identity + delete. The expand control is the prominent button below. */}
+            <div className="flex items-center justify-between gap-3 px-4 py-3">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                 <span className="text-xs tabular-nums text-[var(--muted)]">#{i + 1}</span>
                 <span className="text-xs tabular-nums text-[var(--muted)]">{fmtDate(p.opened_at)}</span>
@@ -269,8 +269,7 @@ export function PositionsTable({ positions }: { positions: Position[] }) {
                 <Badge result={result} partial={partial} />
               </div>
               <div className="flex shrink-0 items-center gap-2">
-                <DeleteButton onConfirm={() => deletePosition(p.legs.map((l) => l.signal_id))} title="מחק את כל העסקה" label="מחק עסקה" />
-                <span className="text-xs text-[var(--muted)]">{isOpen ? "▲ הסתר רגליים" : "▼ הצג רגליים"}</span>
+                <DeleteButton onConfirm={() => deletePosition(p.signal_ids)} title="מחק את כל העסקה" label="מחק עסקה" />
               </div>
             </div>
 
@@ -291,6 +290,15 @@ export function PositionsTable({ positions }: { positions: Position[] }) {
             <div className="border-t border-[var(--border)] px-4 py-3">
               <Summary p={p} />
             </div>
+
+            {/* Prominent expand control */}
+            <button
+              onClick={() => toggle(key)}
+              className="flex w-full items-center justify-center gap-2 border-t border-[var(--border)] py-3 text-sm font-bold tracking-wide transition-colors hover:brightness-125"
+              style={{ background: "rgba(56,189,248,0.16)", color: "#7dd3fc" }}
+            >
+              {isOpen ? "סגור פירוט ▲" : "לחצו לפירוט מלא ▼"}
+            </button>
 
             {/* Per-leg breakdown — on expand */}
             {isOpen && (
