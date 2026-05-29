@@ -8,6 +8,8 @@ import { PositionsCharts } from "@/components/PositionsCharts";
 import { PositionsTable } from "@/components/PositionsTable";
 import { StockJournal } from "@/components/StockJournal";
 import { Disclaimer } from "@/components/Disclaimer";
+import { EditModeProvider } from "@/components/EditMode";
+import { isEditor } from "@/lib/edit-auth";
 
 function ChannelTabs({ channels, selected }: { channels: { channel_id: string; name: string }[]; selected?: string }) {
   if (channels.length <= 1) return null;
@@ -70,11 +72,13 @@ export default async function PositionsPage({
   const selected =
     channel && channels.some((c) => c.channel_id === channel) ? channel : channels[0]?.channel_id;
   const selectedChannel = channels.find((c) => c.channel_id === selected);
+  const canEdit = await isEditor();
 
   // The stocks channel uses a separate shares/price/fees journal.
   if (selectedChannel?.template === "momentum_stocks") {
     const trades = await listStockTrades(selected);
     return (
+      <EditModeProvider canEdit={canEdit}>
       <main className="mx-auto w-full max-w-[1320px] px-6 py-8">
         <header className="mb-6">
           <h1 className="text-2xl font-bold">{selectedChannel.name}</h1>
@@ -87,6 +91,7 @@ export default async function PositionsPage({
         <Disclaimer />
         <StockJournal trades={trades} />
       </main>
+      </EditModeProvider>
     );
   }
 
@@ -149,6 +154,7 @@ export default async function PositionsPage({
   const period = allDates.length ? `${shortDate(allDates[0])} – ${shortDate(allDates[allDates.length - 1])}` : "—";
 
   return (
+    <EditModeProvider canEdit={canEdit}>
     <main className="mx-auto w-full max-w-[1320px] px-6 py-8">
       <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
@@ -216,5 +222,6 @@ export default async function PositionsPage({
         <PositionsTable positions={positions} />
       </section>
     </main>
+    </EditModeProvider>
   );
 }

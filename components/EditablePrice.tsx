@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { saveLegPrice } from "@/app/positions/actions";
+import { useCanEdit } from "@/components/EditMode";
 
 export function EditablePrice({
   signalId,
@@ -12,9 +13,18 @@ export function EditablePrice({
   kind: string;
   value: number | null;
 }) {
+  const canEdit = useCanEdit();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value?.toString() ?? "");
   const [pending, startTransition] = useTransition();
+
+  if (!canEdit) {
+    return (
+      <span className="px-2 py-1 text-sm tabular-nums">
+        {value != null ? value : <span className="text-[var(--muted)]">—</span>}
+      </span>
+    );
+  }
 
   function save() {
     setEditing(false);

@@ -5,6 +5,7 @@ import type { StockTrade, StockTradeInput, StockLeg } from "@/types";
 import { calcStockTrade } from "@/lib/stock-calc";
 import { PositionsCharts } from "./PositionsCharts";
 import { saveStockTrade, removeStockTrade } from "@/app/stocks/actions";
+import { useCanEdit } from "@/components/EditMode";
 
 const GREEN = "#22c55e";
 const RED = "#ef4444";
@@ -97,6 +98,7 @@ function Badge({ result, partial }: { result: string; partial: boolean }) {
 }
 
 export function StockJournal({ trades }: { trades: StockTrade[] }) {
+  const canEdit = useCanEdit();
   const [busy, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -218,13 +220,17 @@ export function StockJournal({ trades }: { trades: StockTrade[] }) {
   return (
     <>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <button
-          onClick={openNew}
-          className="rounded-lg px-4 py-2 text-sm font-bold"
-          style={{ background: "linear-gradient(135deg,#38bdf8,#0ea5e9)", color: "#03131f" }}
-        >
-          + עסקה חדשה
-        </button>
+        {canEdit ? (
+          <button
+            onClick={openNew}
+            className="rounded-lg px-4 py-2 text-sm font-bold"
+            style={{ background: "linear-gradient(135deg,#38bdf8,#0ea5e9)", color: "#03131f" }}
+          >
+            + עסקה חדשה
+          </button>
+        ) : (
+          <span />
+        )}
         <div className="rounded-xl border border-[var(--border)] bg-[var(--panel)] px-4 py-2 text-sm text-[var(--muted)]">
           תקופה: <strong className="text-[var(--text)]">{period}</strong> · סגורות: <strong className="text-[var(--text)]">{closed.length}</strong> · פתוחות: <strong className="text-[var(--accent)]">{openRows.length}</strong>
         </div>
@@ -280,7 +286,9 @@ export function StockJournal({ trades }: { trades: StockTrade[] }) {
                     <td className={TD} style={{ color: c.result === "open" ? undefined : plColor(c.rr) }}>{c.result === "open" ? "—" : rstr(c.rr)}</td>
                     <td className={TD}><Badge result={c.result} partial={c.partial} /></td>
                     <td className={`${TD} text-left`}>
-                      <button onClick={() => openEdit(t)} className="rounded px-2 py-1 text-xs" style={{ color: ACCENT, border: "1px solid var(--border)" }}>ערוך</button>
+                      {canEdit && (
+                        <button onClick={() => openEdit(t)} className="rounded px-2 py-1 text-xs" style={{ color: ACCENT, border: "1px solid var(--border)" }}>ערוך</button>
+                      )}
                     </td>
                   </tr>
                 );

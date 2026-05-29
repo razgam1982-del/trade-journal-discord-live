@@ -2,11 +2,15 @@
 
 import { useTransition } from "react";
 import { saveLegFilled } from "@/app/positions/actions";
+import { useCanEdit } from "@/components/EditMode";
 
 // Shown on limit/trigger entry legs: toggle between pending (not taken, 0
 // performance) and filled (counted).
 export function FilledToggle({ signalId, pending }: { signalId: string; pending: boolean }) {
+  const canEdit = useCanEdit();
   const [busy, startTransition] = useTransition();
+
+  if (!canEdit) return null;
 
   return (
     <button

@@ -2,11 +2,17 @@
 
 import { useState, useTransition } from "react";
 import { savePortfolioSize } from "@/app/positions/actions";
+import { useCanEdit } from "@/components/EditMode";
 
 export function EditablePortfolioSize({ value }: { value: number }) {
+  const canEdit = useCanEdit();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value.toString());
   const [pending, startTransition] = useTransition();
+
+  if (!canEdit) {
+    return <span className="px-2 py-1 text-sm font-semibold tabular-nums">${value.toLocaleString("en-US")}</span>;
+  }
 
   function save() {
     setEditing(false);

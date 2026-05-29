@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import { toggleLegExcluded } from "@/app/positions/actions";
+import { useCanEdit } from "@/components/EditMode";
 
 export function ExcludeToggle({
   signalId,
@@ -10,7 +11,10 @@ export function ExcludeToggle({
   signalId: string;
   excluded: boolean;
 }) {
+  const canEdit = useCanEdit();
   const [pending, startTransition] = useTransition();
+
+  if (!canEdit) return null;
 
   return (
     <button

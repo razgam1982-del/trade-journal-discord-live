@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { getSignalForEdit, saveSignalEdits } from "@/app/positions/actions";
+import { useCanEdit } from "@/components/EditMode";
 
 type Form = Record<string, string>;
 
@@ -32,10 +33,13 @@ function num(v: string): number | null {
 }
 
 export function EditSignalButton({ signalId }: { signalId: string }) {
+  const canEdit = useCanEdit();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<Form>({});
+
+  if (!canEdit) return null;
 
   async function openModal() {
     setOpen(true);
