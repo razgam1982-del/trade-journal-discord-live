@@ -142,6 +142,8 @@ export default async function PositionsPage({
     if (!worst || (p.pnl_dollars ?? 0) < (worst.pnl_dollars ?? 0)) worst = p;
   }
   const openRisk = openPositions.reduce((s, p) => s + p.total_risk_percent, 0);
+  const openPotential = openPositions.reduce((s, p) => s + (p.potential_profit_percent ?? 0), 0);
+  const openPotentialCount = openPositions.filter((p) => p.potential_profit_percent != null).length;
   const openUnrealized = openPositions.reduce((s, p) => s + (p.unrealized_pnl_dollars ?? 0), 0);
   const hasUnrealized = openPositions.some((p) => p.unrealized_pnl_dollars != null);
   const r = (p: { r_achieved: number | null } | null) => (p?.r_achieved != null ? ` · ${p.r_achieved.toFixed(2)}R` : "");
@@ -232,6 +234,7 @@ export default async function PositionsPage({
         <Kpi label="העסקה הטובה ביותר" value={best ? money(best.pnl_dollars) : "—"} sub={best ? `${best.asset}${r(best)}` : "—"} color={best ? "var(--green)" : undefined} />
         <Kpi label="העסקה הגרועה ביותר" value={worst ? money(worst.pnl_dollars) : "—"} sub={worst ? `${worst.asset}${r(worst)}` : "—"} color={worst ? "var(--red)" : undefined} />
         <Kpi label="סיכון פתוח" value={`${openRisk.toFixed(2)}%`} sub={`${openCount} פוזיציות פתוחות`} color="var(--gold)" />
+        <Kpi label="פוטנציאל עסקאות פתוחות" value={`+${openPotential.toFixed(2)}%`} sub={`עד הטייק־פרופיט · ${openPotentialCount} עם יעד`} color="var(--green)" />
       </section>
 
       <section className="mb-6">
