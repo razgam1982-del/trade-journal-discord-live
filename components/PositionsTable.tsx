@@ -255,6 +255,9 @@ export function PositionsTable({ positions }: { positions: Position[] }) {
         const key = p.key + p.opened_at;
         const isOpen = expanded.has(key);
         const partial = p.status === "open" && p.legs.some((l) => l.kind === "reduce" || l.kind === "close");
+        const total$ = p.pnl_dollars != null || p.unrealized_pnl_dollars != null ? (p.pnl_dollars ?? 0) + (p.unrealized_pnl_dollars ?? 0) : null;
+        const totalPct = p.pnl_percent != null || p.unrealized_pnl_percent != null ? (p.pnl_percent ?? 0) + (p.unrealized_pnl_percent ?? 0) : null;
+        const totalR = p.r_achieved != null || p.unrealized_r != null ? (p.r_achieved ?? 0) + (p.unrealized_r ?? 0) : null;
         return (
           // One bordered box per trade so it's clear all the data belongs together.
           <div key={key} className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--panel)]" style={{ boxShadow: `inset 4px 0 0 0 ${border}` }}>
@@ -277,7 +280,15 @@ export function PositionsTable({ positions }: { positions: Position[] }) {
                 )}
                 <span><span className="text-[var(--muted)]">סיכון: </span>{p.total_risk_percent.toFixed(2)}%</span>
               </div>
-              <div className="flex shrink-0 items-center gap-2">
+              <div className="flex shrink-0 flex-wrap items-center justify-end gap-x-3 gap-y-1">
+                <div className="flex items-center gap-2 text-sm font-bold tabular-nums">
+                  <span className="text-[10px] font-normal text-[var(--muted)]">סך הכל</span>
+                  <span style={{ color: plColor(total$) }}>{total$ != null ? money(total$) : "—"}</span>
+                  <span className="font-normal text-[var(--muted)]">·</span>
+                  <span style={{ color: plColor(totalPct) }}>{totalPct != null ? pct(totalPct) : "—"}</span>
+                  <span className="font-normal text-[var(--muted)]">·</span>
+                  <span style={{ color: plColor(totalR) }}>{totalR != null ? `${totalR.toFixed(2)}R` : "—"}</span>
+                </div>
                 <Badge result={result} partial={partial} />
                 <DeleteButton onConfirm={() => deletePosition(p.signal_ids)} title="מחק את כל העסקה" label="מחק עסקה" />
               </div>
