@@ -25,8 +25,8 @@ export function ProfitFactorHero({
       : "#ef4444";
   return (
     <section className="mb-6">
-      <div className="rounded-2xl border-2 p-5" style={{ borderColor: color, background: "var(--panel)" }}>
-        <div className="flex flex-col items-center gap-5 md:flex-row md:justify-between">
+      <div className="mx-auto w-full rounded-2xl border-2 p-5 lg:w-1/2" style={{ borderColor: color, background: "var(--panel)" }}>
+        <div className="flex flex-col items-center gap-5 lg:flex-row lg:justify-between">
           {/* First half of the explanation — right side (RTL). */}
           <p className="flex-1 text-sm leading-relaxed text-[var(--muted)] md:text-right">
             כמה דולר הרווחת על כל דולר שהפסדת (סך כל הרווחים ÷ סך כל ההפסדים). זה המדד המשמעותי באמת — הוא מנטרל את אחוז ההצלחה.
