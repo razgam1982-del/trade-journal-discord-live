@@ -11,6 +11,7 @@ import { PositionsCharts } from "@/components/PositionsCharts";
 import { PositionsTable } from "@/components/PositionsTable";
 import { StockJournal } from "@/components/StockJournal";
 import { RecycleBin } from "@/components/RecycleBin";
+import { ProfitFactorHero } from "@/components/ProfitFactorHero";
 import { Disclaimer } from "@/components/Disclaimer";
 import { EditModeProvider } from "@/components/EditMode";
 import { isEditor } from "@/lib/edit-auth";
@@ -133,7 +134,6 @@ export default async function PositionsPage({
   const avgWin = wins.length ? sumWins / wins.length : 0;
   const avgLoss = losses.length ? sumLosses / losses.length : 0;
   const winRate = wins.length + losses.length > 0 ? (wins.length / (wins.length + losses.length)) * 100 : null;
-  const payoff = avgLoss !== 0 ? avgWin / Math.abs(avgLoss) : null;
   const profitFactor = sumLosses !== 0 ? sumWins / Math.abs(sumLosses) : null;
   let best: (typeof realized)[number] | null = null;
   let worst: (typeof realized)[number] | null = null;
@@ -223,14 +223,14 @@ export default async function PositionsPage({
 
       <Disclaimer />
 
+      <ProfitFactorHero profitFactor={profitFactor} grossWins={sumWins} grossLosses={sumLosses} closedCount={realized.length} />
+
       <section className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-5">
         <Kpi label="סך רווח/הפסד ממומש" value={realized.length ? money(totalPnl) : "—"} sub={realized.length ? `ממוצע לעסקה: ${money(avgPnl)} · ${pct(totalPnlPct)}` : "מלא מחירי יציאה"} color={pnlColor(realized.length ? totalPnl : null)} />
         <Kpi label="רווח פתוח על השולחן" value={hasUnrealized ? money(openUnrealized) : "—"} sub="רווח/הפסד פתוח · לפי מחיר נוכחי" color={pnlColor(hasUnrealized ? openUnrealized : null)} />
         <Kpi label="אחוז הצלחה" value={winRate != null ? `${winRate.toFixed(0)}%` : "—"} sub={`${wins.length} רווח · ${losses.length} הפסד`} color="var(--accent)" />
         <Kpi label="ממוצע עסקה מרוויחה" value={wins.length ? money(avgWin) : "—"} sub={`סה״כ רווחים: ${money(sumWins)}`} color={wins.length ? "var(--green)" : undefined} />
         <Kpi label="ממוצע עסקה מפסידה" value={losses.length ? money(avgLoss) : "—"} sub={`סה״כ הפסדים: ${money(sumLosses)}`} color={losses.length ? "var(--red)" : undefined} />
-        <Kpi label="מכפיל רווח/הפסד" value={payoff != null ? `${payoff.toFixed(2)}x` : "—"} sub="ממוצע רווח ÷ |ממוצע הפסד|" color="var(--accent)" />
-        <Kpi label="פקטור רווח" value={profitFactor != null ? profitFactor.toFixed(2) : "—"} sub="סך רווחים ÷ סך הפסדים" color="var(--gold)" />
         <Kpi label="העסקה הטובה ביותר" value={best ? money(best.pnl_dollars) : "—"} sub={best ? `${best.asset}${r(best)}` : "—"} color={best ? "var(--green)" : undefined} />
         <Kpi label="העסקה הגרועה ביותר" value={worst ? money(worst.pnl_dollars) : "—"} sub={worst ? `${worst.asset}${r(worst)}` : "—"} color={worst ? "var(--red)" : undefined} />
         <Kpi label="סיכון פתוח" value={`${openRisk.toFixed(2)}%`} sub={`${openCount} פוזיציות פתוחות`} color="var(--gold)" />

@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import type { StockTrade, StockTradeInput, StockLeg } from "@/types";
 import { calcStockTrade } from "@/lib/stock-calc";
 import { PositionsCharts } from "./PositionsCharts";
+import { ProfitFactorHero } from "./ProfitFactorHero";
 import { saveStockTrade, removeStockTrade } from "@/app/stocks/actions";
 import { useCanEdit } from "@/components/EditMode";
 
@@ -122,7 +123,6 @@ export function StockJournal({ trades }: { trades: StockTrade[] }) {
   const avgLoss = losses.length ? sumLosses / losses.length : 0;
   const avgPL = closed.length ? totalPL / closed.length : 0;
   const winRate = closed.length ? (wins.length / closed.length) * 100 : null;
-  const payoff = avgLoss !== 0 ? avgWin / Math.abs(avgLoss) : null;
   const profitFactor = sumLosses !== 0 ? sumWins / Math.abs(sumLosses) : null;
   let best: (typeof closed)[number] | null = null;
   let worst: (typeof closed)[number] | null = null;
@@ -236,13 +236,13 @@ export function StockJournal({ trades }: { trades: StockTrade[] }) {
         </div>
       </div>
 
+      <ProfitFactorHero profitFactor={profitFactor} grossWins={sumWins} grossLosses={sumLosses} closedCount={closed.length} />
+
       <section className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
         <Kpi label="סך רווח/הפסד (סגורות)" value={closed.length ? money(totalPL) : "—"} sub={closed.length ? `ממוצע לעסקה: ${money(avgPL)}` : undefined} color={plColor(closed.length ? totalPL : null)} />
         <Kpi label="% הצלחה" value={winRate != null ? `${winRate.toFixed(1)}%` : "—"} sub={`${wins.length} רווחים · ${losses.length} הפסדים`} color={ACCENT} />
         <Kpi label="ממוצע עסקה מרוויחה" value={wins.length ? money(avgWin) : "—"} sub={`סה״כ רווחים: ${money(sumWins)}`} color={wins.length ? GREEN : undefined} />
         <Kpi label="ממוצע עסקה מפסידה" value={losses.length ? money(avgLoss) : "—"} sub={`סה״כ הפסדים: ${money(sumLosses)}`} color={losses.length ? RED : undefined} />
-        <Kpi label="מכפיל רווח/הפסד" value={payoff != null ? `${payoff.toFixed(2)}x` : "—"} sub="ממוצע רווח ÷ |ממוצע הפסד|" color={ACCENT} />
-        <Kpi label="פקטור רווח" value={profitFactor != null ? profitFactor.toFixed(2) : "—"} sub="סך רווחים ÷ סך הפסדים" color="var(--gold)" />
         <Kpi label="העסקה הטובה ביותר" value={best ? money(best.c.pl) : "—"} sub={best ? `${best.t.symbol} · ${rstr(best.c.rr)}` : undefined} color={best ? GREEN : undefined} />
         <Kpi label="העסקה הגרועה ביותר" value={worst ? money(worst.c.pl) : "—"} sub={worst ? `${worst.t.symbol} · ${rstr(worst.c.rr)}` : undefined} color={worst ? RED : undefined} />
       </section>
