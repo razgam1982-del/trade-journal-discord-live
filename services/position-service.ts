@@ -40,6 +40,7 @@ function newPosition(
     opened_at: openedAt,
     closed_at: null,
     legs: [],
+    closed_fraction: 0,
     confirm_dates: [],
     current_stop: null,
     current_tp: null,
@@ -69,8 +70,16 @@ function legFromSignal(
     // Entry legs carry the entry price; exit legs carry the (manual) exit price.
     price: kind === 'entry' ? s.entry_price : s.exit_price,
     stop: s.stop_price,
+    tp: s.tp_price,
     risk_percent: s.risk_percent,
     quantity_text: s.quantity_text,
+    close_percent: s.close_percent,
+    needs_percent: false, // set in finalize
+    manually_edited: s.manually_edited,
+    remaining: 1, // recomputed in finalize for entry legs
+    realized_dollars: null, // accumulated in finalize (closed portions)
+    open_dollars: null, // accumulated in mark (open portion)
+    closes: [], // realization steps recorded in finalize
     excluded: s.excluded,
     pending: false, // computed in finalize
     filled_override: s.filled,
@@ -95,47 +104,123 @@ function finalize(pos: Position, portfolioSize: number): void {
   const entries = pos.legs.filter((l) => l.kind === 'entry' && !l.excluded && !l.pending);
   pos.total_risk_percent = entries.reduce((sum, l) => sum + (l.risk_percent ?? 0), 0);
 
-  // Interim: weight by risk%. Will switch to FTMO lot sizing once instrument
-  // point values are configured.
   const priced = entries.filter((l) => l.price != null);
-  if (priced.length === 0) {
-    pos.avg_entry_price = null;
-    return;
-  }
   const weightSum = priced.reduce((s, l) => s + (l.risk_percent ?? 1), 0);
-  const priceWeighted = priced.reduce((s, l) => s + l.price! * (l.risk_percent ?? 1), 0);
-  pos.avg_entry_price = weightSum > 0 ? priceWeighted / weightSum : null;
+  pos.avg_entry_price =
+    priced.length && weightSum > 0
+      ? priced.reduce((s, l) => s + l.price! * (l.risk_percent ?? 1), 0) / weightSum
+      : null;
 
-  // Realized P/L: average of filled exit prices, then per-leg R against each
-  // leg's ORIGINAL stop (the stop set at that entry, which fixed the size).
-  const exits = pos.legs.filter(
-    (l) => (l.kind === 'reduce' || l.kind === 'close') && !l.excluded && l.price != null,
-  );
-  pos.avg_exit_price = exits.length
-    ? exits.reduce((s, l) => s + l.price!, 0) / exits.length
-    : null;
-
-  if (pos.avg_exit_price == null || (pos.direction !== 'long' && pos.direction !== 'short')) {
-    return; // no realized exit, or unknown direction — nothing to compute
-  }
-  const exit = pos.avg_exit_price;
   const short = pos.direction === 'short';
+  const dirKnown = pos.direction === 'long' || pos.direction === 'short';
 
-  let pnlPercent = 0;
-  let counted = false;
-  for (const leg of priced) {
-    if (leg.stop == null || leg.risk_percent == null) continue;
-    const riskDist = short ? leg.stop - leg.price! : leg.price! - leg.stop;
-    if (riskDist <= 0) continue; // malformed stop for this leg
-    const reward = short ? leg.price! - exit : exit - leg.price!;
-    pnlPercent += (reward / riskDist) * leg.risk_percent;
-    counted = true;
+  // R% a (whole) entry leg realizes if it exits at `price`, against its ORIGINAL
+  // stop (the stop that fixed its size). null when not computable (no price yet).
+  const legR = (leg: PositionLeg, price: number): number | null => {
+    if (!dirKnown || leg.price == null || leg.stop == null || leg.risk_percent == null) return null;
+    const riskDist = short ? leg.stop - leg.price : leg.price - leg.stop;
+    if (riskDist <= 0) return null;
+    const reward = short ? leg.price - price : price - leg.price;
+    return (reward / riskDist) * leg.risk_percent;
+  };
+
+  // Per-leg accounting: every entry leg starts fully open (remaining = 1). Exit
+  // events consume from the legs and realize their R at the event's price. This
+  // runs even before prices are filled, so "closed/reduced" shows immediately.
+  const open = entries.map((leg) => {
+    leg.remaining = 1;
+    return { leg, remaining: 1 };
+  });
+  const dayOf = (iso: string) => iso.slice(0, 10);
+
+  const exitLegs = pos.legs.filter(
+    (l) => (l.kind === 'reduce' || l.kind === 'close') && !l.excluded,
+  );
+  let realized = 0;
+  let closedRisk = 0;
+  let exitNum = 0;
+  let exitDen = 0;
+  let anyRealized = false;
+
+  const consume = (o: { leg: PositionLeg; remaining: number }, take: number, ev: PositionLeg) => {
+    if (take <= 1e-9) return;
+    const price = ev.price; // exit_price of the reduce/close event
+    const rk = o.leg.risk_percent ?? 0;
+    const r = price != null ? legR(o.leg, price) : null;
+    let stepRealized: number | null = null;
+    if (r != null) {
+      realized += take * r;
+      exitNum += take * rk * price!;
+      exitDen += take * rk;
+      anyRealized = true;
+      stepRealized = ((take * r) / 100) * portfolioSize;
+      o.leg.realized_dollars = (o.leg.realized_dollars ?? 0) + stepRealized;
+    }
+    closedRisk += take * rk;
+    o.remaining -= take;
+    o.leg.remaining = o.remaining;
+    // Record this realization step on the entry leg, for the per-leg history view.
+    o.leg.closes.push({
+      date: ev.date,
+      fraction: take,
+      price,
+      realized_dollars: stepRealized,
+      manually_edited: ev.manually_edited,
+      label: ev.quantity_text,
+    });
+  };
+
+  for (const ev of exitLegs) {
+    ev.needs_percent = false;
+    const qt = ev.quantity_text?.trim() ?? '';
+    const frac = exitFraction(ev);
+
+    if (/אחרונה/.test(qt)) {
+      // Leg-scoped: the latest still-open entry leg. With a fraction ("חצי מהעסקה
+      // האחרונה") realize that share of THAT leg; without one, close it fully.
+      const cand = [...open].reverse().find((o) => o.remaining > 1e-9 && o.leg.date <= ev.date);
+      if (cand) consume(cand, frac != null ? Math.min(frac, cand.remaining) : cand.remaining, ev);
+    } else if (/היום/.test(qt)) {
+      // "של היום" — every still-open leg opened on the same day (a fraction
+      // applies per such leg; otherwise close them fully).
+      const d = dayOf(ev.date);
+      for (const o of open) {
+        if (o.remaining > 1e-9 && o.leg.date <= ev.date && dayOf(o.leg.date) === d) {
+          consume(o, frac != null ? Math.min(frac, o.remaining) : o.remaining, ev);
+        }
+      }
+    } else if (frac != null) {
+      // Percentage scale-out — take `frac` of each leg's ORIGINAL size.
+      for (const o of open) consume(o, Math.min(frac, o.remaining), ev);
+    } else if (ev.kind === 'close') {
+      // Full close — take whatever remains.
+      for (const o of open) consume(o, o.remaining, ev);
+    } else {
+      ev.needs_percent = true; // reduce with no stated amount
+    }
   }
 
-  if (!counted) return;
-  pos.pnl_percent = pnlPercent;
-  pos.pnl_dollars = (pnlPercent / 100) * portfolioSize;
-  pos.r_achieved = pos.total_risk_percent > 0 ? pnlPercent / pos.total_risk_percent : null;
+  pos.closed_fraction = pos.total_risk_percent > 0 ? Math.min(1, closedRisk / pos.total_risk_percent) : 0;
+  pos.avg_exit_price = exitDen > 0 ? exitNum / exitDen : null;
+  if (anyRealized) {
+    pos.pnl_percent = realized;
+    pos.pnl_dollars = (realized / 100) * portfolioSize;
+    pos.r_achieved = pos.total_risk_percent > 0 ? realized / pos.total_risk_percent : null;
+  }
+}
+
+// The fraction of the WHOLE position an exit leg closes: explicit close_percent,
+// a percentage in the quantity text, or a fraction word. Null when unstated.
+function exitFraction(leg: PositionLeg): number | null {
+  if (leg.close_percent != null) return leg.close_percent / 100;
+  const qt = leg.quantity_text?.trim() ?? '';
+  const pctMatch = qt.match(/(\d+(?:\.\d+)?)\s*%/);
+  if (pctMatch) return Number(pctMatch[1]) / 100;
+  if (/שני\s*שליש|2\s*\/\s*3/.test(qt)) return 2 / 3;
+  if (/חצי/.test(qt)) return 0.5;
+  if (/שליש/.test(qt)) return 1 / 3;
+  if (/רבע/.test(qt)) return 0.25;
+  return null;
 }
 
 // Marks an OPEN position to the current market price → unrealized P/L.
@@ -147,15 +232,19 @@ function mark(pos: Position, prices: Record<string, number>, portfolioSize: numb
   if (pos.direction !== 'long' && pos.direction !== 'short') return;
   const short = pos.direction === 'short';
 
+  // Mark only the still-open share of each entry leg (its remaining fraction).
   const entries = pos.legs.filter((l) => l.kind === 'entry' && !l.excluded && !l.pending && l.price != null);
   let pct = 0;
   let counted = false;
   for (const leg of entries) {
-    if (leg.stop == null || leg.risk_percent == null) continue;
+    const rem = leg.remaining ?? 1;
+    if (rem <= 1e-9 || leg.stop == null || leg.risk_percent == null) continue;
     const riskDist = short ? leg.stop - leg.price! : leg.price! - leg.stop;
     if (riskDist <= 0) continue;
     const reward = short ? leg.price! - price : price - leg.price!;
-    pct += (reward / riskDist) * leg.risk_percent;
+    const legPct = rem * (reward / riskDist) * leg.risk_percent;
+    pct += legPct;
+    leg.open_dollars = (leg.open_dollars ?? 0) + (legPct / 100) * portfolioSize;
     counted = true;
   }
   if (!counted) return;

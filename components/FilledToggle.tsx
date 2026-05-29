@@ -20,7 +20,7 @@ export function FilledToggle({ signalId, pending }: { signalId: string; pending:
       }}
       title={pending ? "סמן שהעסקה נכנסה (תיספר)" : "סמן כממתינה (לא נספרת)"}
     >
-      {pending ? "✓ נכנסה" : "⏳ ממתין"}
+      {pending ? "✓ סמן שנכנסה" : "↩ החזר להמתנה"}
     </button>
   );
 }

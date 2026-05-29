@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { listChannels } from "@/services/channel-service";
 import { getPositions } from "@/services/position-service";
+import { listStockTrades, calcStockTrade } from "@/services/stock-trade-service";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,14 @@ export default async function Home() {
   const channels = await listChannels();
   const summaries = await Promise.all(
     channels.map(async (c) => {
+      if (c.template === "momentum_stocks") {
+        const trades = await listStockTrades(c.channel_id);
+        const calcs = trades.map((t) => calcStockTrade(t));
+        const open = calcs.filter((k) => k.result === "open").length;
+        const closed = calcs.filter((k) => k.result !== "open");
+        const realizedPnl = closed.reduce((s, k) => s + k.pl, 0);
+        return { channel: c, total: trades.length, open, realizedPnl, hasRealized: closed.length > 0 };
+      }
       const positions = await getPositions(c.channel_id);
       const open = positions.filter((p) => p.status === "open").length;
       const realizedPnl = positions.reduce((s, p) => s + (p.pnl_dollars ?? 0), 0);

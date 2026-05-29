@@ -53,6 +53,7 @@ export function EditSignalButton({ signalId }: { signalId: string }) {
         tp_price: s.tp_price?.toString() ?? "",
         risk_percent: s.risk_percent?.toString() ?? "",
         quantity_text: s.quantity_text ?? "",
+        close_percent: s.close_percent?.toString() ?? "",
       });
     }
     setLoading(false);
@@ -75,6 +76,7 @@ export function EditSignalButton({ signalId }: { signalId: string }) {
       tp_price: num(form.tp_price),
       risk_percent: num(form.risk_percent),
       quantity_text: form.quantity_text.trim() || null,
+      close_percent: num(form.close_percent),
     });
     setSaving(false);
     setOpen(false);
@@ -151,6 +153,11 @@ export function EditSignalButton({ signalId }: { signalId: string }) {
                 <Field label="כמות (טקסט)">
                   <input className={inputCls} style={inputStyle} value={form.quantity_text ?? ""} onChange={(e) => set("quantity_text", e.target.value)} />
                 </Field>
+                {(form.action === "reduce" || form.action === "close") && (
+                  <Field label="% שנסגר (יציאה חלקית)">
+                    <input type="number" step="any" className={inputCls} style={inputStyle} value={form.close_percent ?? ""} onChange={(e) => set("close_percent", e.target.value)} placeholder="לדוגמה 20" />
+                  </Field>
+                )}
               </div>
             )}
 

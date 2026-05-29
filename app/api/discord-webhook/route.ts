@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { saveDiscordMessage } from '@/services/discord-message-service';
-import { parseTradeMessage } from '@/services/trade-parser-service';
-import { upsertTradeSignal } from '@/services/trade-signal-service';
+import { parseTradeMessage, parseStockMessage } from '@/services/trade-parser-service';
+import { upsertTradeSignal, replaceMessageSignals } from '@/services/trade-signal-service';
+import { getChannel } from '@/services/channel-service';
 import type { DiscordMessagePayload } from '@/types';
 
 export async function POST(req: NextRequest) {
@@ -43,10 +44,16 @@ export async function POST(req: NextRequest) {
 
     // Parse and persist the structured signal. A parse failure must not fail
     // the message save — the raw message is the source of truth and can be
-    // re-parsed later.
+    // re-parsed later. The channel's template decides the parser.
     try {
-      const parsed = await parseTradeMessage(saved.raw_content);
-      await upsertTradeSignal(saved.id, parsed);
+      const channel = await getChannel(body.channel_id);
+      if (channel?.template === 'momentum_stocks') {
+        const signals = await parseStockMessage(saved.raw_content);
+        await replaceMessageSignals(saved.id, signals);
+      } else {
+        const parsed = await parseTradeMessage(saved.raw_content);
+        await upsertTradeSignal(saved.id, parsed);
+      }
     } catch (err) {
       console.error(`Parse/persist failed for message ${saved.id}:`, err);
     }

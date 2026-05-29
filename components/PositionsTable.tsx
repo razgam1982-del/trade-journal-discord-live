@@ -62,45 +62,79 @@ function Badge({ result, partial }: { result: string; partial: boolean }) {
 }
 
 function LegsDetail({ p }: { p: Position }) {
+  const realized$ = p.pnl_dollars;
+  const open$ = p.unrealized_pnl_dollars;
+  const total$ = realized$ != null || open$ != null ? (realized$ ?? 0) + (open$ ?? 0) : null;
+  const totalPct =
+    p.pnl_percent != null || p.unrealized_pnl_percent != null ? (p.pnl_percent ?? 0) + (p.unrealized_pnl_percent ?? 0) : null;
+  const totalR = p.r_achieved != null || p.unrealized_r != null ? (p.r_achieved ?? 0) + (p.unrealized_r ?? 0) : null;
   return (
     <div className="bg-[var(--panel-2)] p-3">
-      {p.status === "open" && (
-        <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-          <span className="text-[var(--muted)]">מחיר נוכחי:</span>
-          <EditableCurrentPrice asset={p.asset} value={p.current_price} />
-          <span className="text-[var(--border)]">|</span>
-          <span className="text-[var(--muted)]">רווח פתוח:</span>
-          <span className="font-semibold tabular-nums" style={{ color: plColor(p.unrealized_pnl_dollars) }}>
-            {p.unrealized_pnl_dollars != null
-              ? `${money(p.unrealized_pnl_dollars)} · ${pct(p.unrealized_pnl_percent)} · ${p.unrealized_r != null ? p.unrealized_r.toFixed(2) + "R" : "—"}`
-              : "הזן מחיר נוכחי כדי לחשב"}
-          </span>
+      <div className="mb-3 flex flex-col gap-1 text-sm tabular-nums">
+        <div className="font-semibold">
+          <span className="text-[var(--muted)]">רווח/הפסד מומש</span>
+          {p.closed_fraction > 0 && (
+            <span className="ms-2 rounded px-1.5 py-0.5 text-[11px]" style={{ background: "rgba(245,158,11,0.15)", color: "var(--gold)" }}>מומש {Math.round(p.closed_fraction * 100)}%</span>
+          )}
         </div>
-      )}
+        <div className="ms-3 flex flex-col gap-0.5">
+          <div><span className="text-[var(--muted)]">סכום $: </span><span className="font-semibold" style={{ color: plColor(p.pnl_dollars) }}>{p.pnl_dollars != null ? money(p.pnl_dollars) : "—"}</span></div>
+          <div><span className="text-[var(--muted)]">תשואה %: </span><span style={{ color: plColor(p.pnl_percent) }}>{p.pnl_percent != null ? pct(p.pnl_percent) : "—"}</span></div>
+          <div><span className="text-[var(--muted)]">יחס סיכון (R): </span><span style={{ color: plColor(p.r_achieved) }}>{p.r_achieved != null ? `${p.r_achieved.toFixed(2)}R` : "—"}</span></div>
+        </div>
+        {p.status === "open" && (
+          <>
+            <div className="mt-1 flex items-center gap-2">
+              <span className="text-[var(--muted)]">מחיר נוכחי:</span>
+              <EditableCurrentPrice asset={p.asset} value={p.current_price} />
+            </div>
+            <div className="font-semibold text-[var(--muted)]">רווח/הפסד פתוח</div>
+            <div className="ms-3 flex flex-col gap-0.5">
+              <div><span className="text-[var(--muted)]">סכום $: </span><span className="font-semibold" style={{ color: plColor(p.unrealized_pnl_dollars) }}>{p.unrealized_pnl_dollars != null ? money(p.unrealized_pnl_dollars) : "הזן מחיר נוכחי כדי לחשב"}</span></div>
+              <div><span className="text-[var(--muted)]">תשואה %: </span><span style={{ color: plColor(p.unrealized_pnl_percent) }}>{p.unrealized_pnl_percent != null ? pct(p.unrealized_pnl_percent) : "—"}</span></div>
+              <div><span className="text-[var(--muted)]">יחס סיכון (R): </span><span style={{ color: plColor(p.unrealized_r) }}>{p.unrealized_r != null ? `${p.unrealized_r.toFixed(2)}R` : "—"}</span></div>
+            </div>
+          </>
+        )}
+        <div className="mt-1 border-t border-[var(--border)] pt-1 font-semibold">סך הכל (מומש + לא ממומש)</div>
+        <div className="ms-3 flex flex-col gap-0.5">
+          <div><span className="text-[var(--muted)]">סכום $: </span><span className="font-bold" style={{ color: plColor(total$) }}>{total$ != null ? money(total$) : "—"}</span></div>
+          <div><span className="text-[var(--muted)]">תשואה %: </span><span style={{ color: plColor(totalPct) }}>{totalPct != null ? pct(totalPct) : "—"}</span></div>
+          <div><span className="text-[var(--muted)]">יחס סיכון (R): </span><span style={{ color: plColor(totalR) }}>{totalR != null ? `${totalR.toFixed(2)}R` : "—"}</span></div>
+        </div>
+      </div>
       <table className="w-full border-separate border-spacing-0 text-sm">
         <thead>
           <tr>
-            {["תאריך", "סוג", "פרט", "מחיר", "סיכון", ""].map((h, i) => (
+            {["תאריך", "סוג", "פרט", "מחיר כניסה/יציאה", "סטופ", "טייק", "סיכון", "מומש $", "פתוח $", ""].map((h, i) => (
               <th key={i} className="border-b border-[var(--border)] px-2 py-1.5 text-right text-xs text-[var(--muted)]">{h}</th>
             ))}
           </tr>
         </thead>
         <tbody>
           {p.legs.map((leg) => {
+            const rem = leg.remaining ?? 1;
+            const closedEntry = leg.kind === "entry" && rem <= 0.0001;
+            const reducedEntry = leg.kind === "entry" && rem > 0.0001 && rem < 0.9999;
             const struck = leg.excluded
               ? { textDecoration: "line-through" as const, opacity: 0.45 }
-              : leg.pending
-                ? { opacity: 0.6 }
-                : undefined;
+              : closedEntry
+                ? { textDecoration: "line-through" as const, opacity: 0.55 }
+                : leg.pending
+                  ? { opacity: 0.6 }
+                  : undefined;
             const isLimitEntry = leg.kind === "entry" && (leg.entry_type === "limit" || leg.entry_type === "trigger");
             const detail =
               leg.kind === "entry"
                 ? leg.entry_type
                   ? ETYPE[leg.entry_type] ?? leg.entry_type
                   : "כניסה"
-                : leg.quantity_text ?? LEG[leg.kind];
+                : (leg.kind === "reduce" || leg.kind === "close") && leg.close_percent != null
+                  ? `${leg.quantity_text ?? LEG[leg.kind]} · ${leg.close_percent}% מהפוזיציה`
+                  : leg.quantity_text ?? LEG[leg.kind];
             return (
-              <tr key={leg.signal_id}>
+              <Fragment key={leg.signal_id}>
+              <tr>
                 <td className="border-b border-[var(--border)] px-2 py-1.5 text-[var(--muted)] tabular-nums whitespace-nowrap" style={struck}>{fmtTime(leg.date)}</td>
                 <td className="border-b border-[var(--border)] px-2 py-1.5" style={struck}>{LEG[leg.kind]}</td>
                 <td className="border-b border-[var(--border)] px-2 py-1.5" style={struck}>
@@ -108,11 +142,36 @@ function LegsDetail({ p }: { p: Position }) {
                   {leg.pending && (
                     <span className="ms-2 rounded px-1.5 py-0.5 text-[10px]" style={{ background: "rgba(245,158,11,0.15)", color: "var(--gold)" }}>ממתין</span>
                   )}
+                  {leg.needs_percent && (
+                    <span className="ms-2 rounded px-1.5 py-0.5 text-[10px]" style={{ background: "rgba(245,158,11,0.15)", color: "var(--gold)" }}>צריך אחוז</span>
+                  )}
+                  {closedEntry && (
+                    <span className="ms-2 rounded px-1.5 py-0.5 text-[10px] font-semibold" style={{ background: "rgba(239,68,68,0.15)", color: RED }}>נסגרה</span>
+                  )}
+                  {reducedEntry && (
+                    <span className="ms-2 rounded px-1.5 py-0.5 text-[10px] font-semibold" style={{ background: "rgba(245,158,11,0.15)", color: "var(--gold)" }}>הופחת · נותר {Math.round(rem * 100)}%</span>
+                  )}
+                  {leg.kind === "entry" && !closedEntry && !reducedEntry && !leg.pending && (
+                    <span className="ms-2 rounded px-1.5 py-0.5 text-[10px] font-semibold" style={{ background: "rgba(34,197,94,0.12)", color: GREEN }}>פתוחה</span>
+                  )}
+                  {leg.manually_edited ? (
+                    <span className="ms-2 rounded px-1.5 py-0.5 text-[10px]" style={{ background: "rgba(56,189,248,0.15)", color: ACCENT }}>ידני</span>
+                  ) : (
+                    <span className="ms-2 rounded px-1.5 py-0.5 text-[10px]" style={{ background: "rgba(148,163,184,0.12)", color: "var(--muted)" }}>בוט</span>
+                  )}
                 </td>
                 <td className="border-b border-[var(--border)] px-1 py-1" style={struck}>
                   {leg.kind === "cancel" ? <span className="px-2 text-[var(--muted)]">—</span> : <EditablePrice signalId={leg.signal_id} kind={leg.kind} value={leg.price} />}
                 </td>
+                <td className="border-b border-[var(--border)] px-2 py-1.5 tabular-nums" style={{ ...struck, color: leg.stop != null ? "var(--gold)" : undefined }}>{leg.stop != null ? leg.stop : "—"}</td>
+                <td className="border-b border-[var(--border)] px-2 py-1.5 tabular-nums" style={{ ...struck, color: leg.tp != null ? GREEN : undefined }}>{leg.tp != null ? leg.tp : "—"}</td>
                 <td className="border-b border-[var(--border)] px-2 py-1.5 tabular-nums" style={struck}>{leg.risk_percent != null ? `${leg.risk_percent}%` : "—"}</td>
+                <td className="border-b border-[var(--border)] px-2 py-1.5 tabular-nums font-bold" style={{ color: leg.kind === "entry" ? plColor(leg.realized_dollars) : undefined }}>
+                  {leg.kind === "entry" && leg.realized_dollars != null ? money(leg.realized_dollars) : "—"}
+                </td>
+                <td className="border-b border-[var(--border)] px-2 py-1.5 tabular-nums font-semibold" style={{ color: leg.kind === "entry" ? plColor(leg.open_dollars) : undefined }}>
+                  {leg.kind === "entry" && leg.open_dollars != null ? money(leg.open_dollars) : "—"}
+                </td>
                 <td className="border-b border-[var(--border)] px-1 py-1 text-left whitespace-nowrap">
                   {isLimitEntry && <FilledToggle signalId={leg.signal_id} pending={leg.pending} />}
                   {leg.discord_url && (
@@ -122,6 +181,23 @@ function LegsDetail({ p }: { p: Position }) {
                   <ExcludeToggle signalId={leg.signal_id} excluded={leg.excluded} />
                 </td>
               </tr>
+              {leg.kind === "entry" && leg.closes.map((c, ci) => (
+                <tr key={`${leg.signal_id}-c${ci}`} style={{ background: "rgba(56,189,248,0.04)" }}>
+                  <td className="border-b border-[var(--border)] py-1 ps-6 pe-2 text-[var(--muted)] tabular-nums whitespace-nowrap text-xs">↳ {fmtTime(c.date)}</td>
+                  <td className="border-b border-[var(--border)] px-2 py-1 text-xs text-[var(--muted)]">מימוש</td>
+                  <td className="border-b border-[var(--border)] px-2 py-1 text-xs">{(c.label ?? "מימוש")} · {Math.round(c.fraction * 100)}% מהרגל</td>
+                  <td className="border-b border-[var(--border)] px-2 py-1 text-xs tabular-nums">{c.price != null ? c.price : "—"}</td>
+                  <td className="border-b border-[var(--border)] px-2 py-1">—</td>
+                  <td className="border-b border-[var(--border)] px-2 py-1">—</td>
+                  <td className="border-b border-[var(--border)] px-2 py-1">—</td>
+                  <td className="border-b border-[var(--border)] px-2 py-1 text-xs tabular-nums font-semibold" style={{ color: plColor(c.realized_dollars) }}>{c.realized_dollars != null ? money(c.realized_dollars) : "—"}</td>
+                  <td className="border-b border-[var(--border)] px-2 py-1">—</td>
+                  <td className="border-b border-[var(--border)] px-2 py-1 text-left">
+                    <span className="rounded px-1.5 py-0.5 text-[10px]" style={c.manually_edited ? { background: "rgba(56,189,248,0.15)", color: ACCENT } : { background: "rgba(148,163,184,0.12)", color: "var(--muted)" }}>{c.manually_edited ? "ידני" : "בוט"}</span>
+                  </td>
+                </tr>
+              ))}
+              </Fragment>
             );
           })}
         </tbody>
@@ -161,7 +237,9 @@ export function PositionsTable({ positions }: { positions: Position[] }) {
             <th className={TH}>ממוצע יציאה</th>
             <th className={TH}>סיכון %</th>
             <th className={TH}>R</th>
-            <th className={TH}>רווח/הפסד $</th>
+            <th className={TH}>מומש $</th>
+            <th className={TH}>לא ממומש $</th>
+            <th className={TH}>סך הכל $</th>
             <th className={TH}>תשואה %</th>
             <th className={TH}>תוצאה</th>
             <th className={TH}></th>
@@ -174,7 +252,15 @@ export function PositionsTable({ positions }: { positions: Position[] }) {
             const key = p.key + p.opened_at;
             const isOpen = expanded.has(key);
             const partial = p.status === "open" && p.legs.some((l) => l.kind === "reduce" || l.kind === "close");
-            const pnl = effPnl(p);
+            // Realized + unrealized shown separately, plus their combined total.
+            const realized$ = p.pnl_dollars;
+            const open$ = p.unrealized_pnl_dollars;
+            const hasAnyPnl = realized$ != null || open$ != null;
+            const total$ = hasAnyPnl ? (realized$ ?? 0) + (open$ ?? 0) : null;
+            const hasPct = p.pnl_percent != null || p.unrealized_pnl_percent != null;
+            const totalPct = hasPct ? (p.pnl_percent ?? 0) + (p.unrealized_pnl_percent ?? 0) : null;
+            const hasR = p.r_achieved != null || p.unrealized_r != null;
+            const totalR = hasR ? (p.r_achieved ?? 0) + (p.unrealized_r ?? 0) : null;
             return (
               <Fragment key={key}>
                 <tr
@@ -194,15 +280,17 @@ export function PositionsTable({ positions }: { positions: Position[] }) {
                   <td className={`${TD} tabular-nums`}>{p.avg_entry_price != null ? p.avg_entry_price.toFixed(2) : "—"}</td>
                   <td className={`${TD} tabular-nums`}>{p.avg_exit_price != null ? p.avg_exit_price.toFixed(2) : "—"}</td>
                   <td className={`${TD} tabular-nums`}>{p.total_risk_percent.toFixed(2)}%</td>
-                  <td className={`${TD} tabular-nums`} style={{ color: plColor(pnl) }}>{effR(p) != null ? `${effR(p)!.toFixed(2)}R` : "—"}</td>
-                  <td className={`${TD} tabular-nums font-semibold`} style={{ color: plColor(pnl) }}>{money(pnl)}</td>
-                  <td className={`${TD} tabular-nums`} style={{ color: plColor(pnl) }}>{pct(effPct(p))}</td>
+                  <td className={`${TD} tabular-nums`} style={{ color: plColor(totalR) }}>{totalR != null ? `${totalR.toFixed(2)}R` : "—"}</td>
+                  <td className={`${TD} tabular-nums font-semibold`} style={{ color: plColor(realized$) }}>{realized$ != null ? money(realized$) : "—"}</td>
+                  <td className={`${TD} tabular-nums font-semibold`} style={{ color: plColor(open$) }}>{open$ != null ? money(open$) : "—"}</td>
+                  <td className={`${TD} tabular-nums font-bold`} style={{ color: plColor(total$) }}>{total$ != null ? money(total$) : "—"}</td>
+                  <td className={`${TD} tabular-nums`} style={{ color: plColor(totalPct) }}>{totalPct != null ? pct(totalPct) : "—"}</td>
                   <td className={TD}><Badge result={result} partial={partial} /></td>
                   <td className={`${TD} text-[var(--muted)]`}>{isOpen ? "▲" : "▼"}</td>
                 </tr>
                 {isOpen && (
                   <tr>
-                    <td colSpan={12} className="border-b border-[var(--border)] p-0">
+                    <td colSpan={14} className="border-b border-[var(--border)] p-0">
                       <LegsDetail p={p} />
                     </td>
                   </tr>

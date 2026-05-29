@@ -13,6 +13,8 @@ const EDITABLE_FIELDS = new Set([
   'tp_price',
   'risk_percent',
   'quantity_text',
+  'quantity_fraction',
+  'close_percent',
 ]);
 
 // Reads a single signal row (for the edit form).
@@ -45,32 +47,82 @@ export async function updateSignalFields(
   }
 }
 
-// Persists the parsed signal for a message. Idempotent on message_id, so a
-// re-parse (e.g. after a Discord edit) updates the same row — but never
-// overwrites a signal that was corrected by hand in the journal.
+// Persists the parsed signal for a message at a given index (default 0).
+// Idempotent on (message_id, signal_index), so a re-parse updates the same row —
+// but never overwrites a signal that was corrected by hand in the journal.
 export async function upsertTradeSignal(
   messageId: string,
   parsed: ParsedSignal,
+  signalIndex = 0,
 ): Promise<void> {
   const { data: existing } = await supabaseAdmin
     .from('trade_signals')
     .select('manually_edited')
     .eq('message_id', messageId)
+    .eq('signal_index', signalIndex)
     .maybeSingle();
 
   if (existing?.manually_edited) return;
 
-  const { error } = await supabaseAdmin.from('trade_signals').upsert(
-    {
-      message_id: messageId,
-      ...parsed,
-      needs_review: parsed.parser_confidence < 0.6,
-    },
-    { onConflict: 'message_id' },
-  );
+  // Only write exit_price when the parser actually extracted one, so a re-parse
+  // of a message without a price never wipes a price filled earlier.
+  const { exit_price, ...rest } = parsed;
+  const row: Record<string, unknown> = {
+    message_id: messageId,
+    signal_index: signalIndex,
+    ...rest,
+    needs_review: parsed.parser_confidence < 0.6,
+  };
+  if (exit_price != null) row.exit_price = exit_price;
+
+  const { error } = await supabaseAdmin
+    .from('trade_signals')
+    .upsert(row, { onConflict: 'message_id,signal_index' });
 
   if (error) {
     throw new Error(`Failed to upsert trade signal: ${error.message}`);
+  }
+}
+
+// Replaces ALL signals for a message with a fresh list (stocks channel: one
+// message can hold several trade events). Preserves the whole message if ANY of
+// its rows was manually edited, so hand corrections are never lost on re-parse.
+export async function replaceMessageSignals(
+  messageId: string,
+  parsedList: ParsedSignal[],
+): Promise<void> {
+  const { data: existing, error: readErr } = await supabaseAdmin
+    .from('trade_signals')
+    .select('manually_edited')
+    .eq('message_id', messageId);
+  if (readErr) {
+    throw new Error(`Failed to read existing signals: ${readErr.message}`);
+  }
+  if ((existing ?? []).some((r) => r.manually_edited)) return;
+
+  const { error: delErr } = await supabaseAdmin
+    .from('trade_signals')
+    .delete()
+    .eq('message_id', messageId);
+  if (delErr) {
+    throw new Error(`Failed to clear signals: ${delErr.message}`);
+  }
+
+  // A commentary-only message yields an empty list — record one non-trade row so
+  // the message isn't re-parsed needlessly and stays visible in the raw journal.
+  const rows =
+    parsedList.length === 0
+      ? [{ message_id: messageId, signal_index: 0, is_trade: false, parser_confidence: 1, needs_review: false }]
+      : parsedList.map((p, i) => ({
+          message_id: messageId,
+          signal_index: i,
+          ...p,
+          needs_review: p.parser_confidence < 0.6,
+        }));
+
+  const { error: insErr } = await supabaseAdmin.from('trade_signals').insert(rows);
+  if (insErr) {
+    throw new Error(`Failed to insert signals: ${insErr.message}`);
   }
 }
 

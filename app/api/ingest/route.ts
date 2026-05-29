@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { saveDiscordMessage } from '@/services/discord-message-service';
-import { parseTradeMessage } from '@/services/trade-parser-service';
-import { upsertTradeSignal } from '@/services/trade-signal-service';
+import { parseTradeMessage, parseStockMessage } from '@/services/trade-parser-service';
+import { upsertTradeSignal, replaceMessageSignals } from '@/services/trade-signal-service';
+import { getChannel } from '@/services/channel-service';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
@@ -19,23 +20,36 @@ export async function POST(req: NextRequest) {
 
   for (const m of messages) {
     try {
+      const channelId = m.channel_id ?? 'backfill';
       const saved = await saveDiscordMessage({
         discord_message_id: m.discord_message_id,
-        channel_id: m.channel_id ?? 'backfill',
+        channel_id: channelId,
         channel_name: m.channel_name ?? 'עסקאות-נדירות-מיוחדות',
         author: m.author ?? 'Raz Gamliel',
         raw_content: m.raw_content,
         created_at: m.created_at,
       });
-      const parsed = await parseTradeMessage(saved.raw_content);
-      await upsertTradeSignal(saved.id, parsed);
-      results.push({
-        id: m.discord_message_id,
-        is_trade: parsed.is_trade,
-        asset: parsed.asset,
-        direction: parsed.direction,
-        action: parsed.action,
-      });
+
+      const channel = await getChannel(channelId);
+      if (channel?.template === 'momentum_stocks') {
+        const signals = await parseStockMessage(saved.raw_content);
+        await replaceMessageSignals(saved.id, signals);
+        results.push({
+          id: m.discord_message_id,
+          template: 'momentum_stocks',
+          signals: signals.map((s) => ({ asset: s.asset, action: s.action, quantity_fraction: s.quantity_fraction })),
+        });
+      } else {
+        const parsed = await parseTradeMessage(saved.raw_content);
+        await upsertTradeSignal(saved.id, parsed);
+        results.push({
+          id: m.discord_message_id,
+          is_trade: parsed.is_trade,
+          asset: parsed.asset,
+          direction: parsed.direction,
+          action: parsed.action,
+        });
+      }
     } catch (err) {
       results.push({
         id: m.discord_message_id,

@@ -2,9 +2,43 @@ import Link from "next/link";
 import { getPositions } from "@/services/position-service";
 import { getPortfolioSize } from "@/services/settings-service";
 import { listChannels } from "@/services/channel-service";
+import { listStockTrades } from "@/services/stock-trade-service";
 import { EditablePortfolioSize } from "@/components/EditablePortfolioSize";
 import { PositionsCharts } from "@/components/PositionsCharts";
 import { PositionsTable } from "@/components/PositionsTable";
+import { StockJournal } from "@/components/StockJournal";
+
+const DISCLAIMER = (
+  <div className="mb-6 flex items-start gap-3 rounded-xl border px-4 py-3 text-base leading-relaxed" style={{ background: "linear-gradient(135deg, rgba(245,158,11,0.12), rgba(245,158,11,0.05))", borderColor: "rgba(245,158,11,0.35)", color: "#fde68a" }}>
+    <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-base font-extrabold" style={{ background: "rgba(245,158,11,0.25)", color: "var(--gold)" }}>!</span>
+    <div>
+      <strong style={{ color: "#fcd34d" }}>אזהרה — יומן לימודי, סימולציות בלבד ללא כסף אמיתי.</strong>{" "}
+      יומן המסחר הינו לימודי ומורכב מסימולציות בלבד, ללא מסחר בכסף אמיתי — כסף מדומה ולא אמיתי, למטרות לימודיות, בידוריות והעשרה בלבד. אין באמור משום ייעוץ או שיווק השקעות, המלצה לרכישה או מכירה של נייר ערך, או תחליף לייעוץ המתחשב בנתונים ובצרכים של כל אדם. ביצועי עבר אינם מעידים על ביצועים עתידיים. כל פעולה שתיעשה על בסיס המידע כאן היא באחריות המשתמש בלבד.
+    </div>
+  </div>
+);
+
+function ChannelTabs({ channels, selected }: { channels: { channel_id: string; name: string }[]; selected?: string }) {
+  if (channels.length <= 1) return null;
+  return (
+    <div className="mb-5 flex flex-wrap gap-2">
+      {channels.map((c) => (
+        <Link
+          key={c.channel_id}
+          href={`/positions?channel=${c.channel_id}`}
+          className="rounded-lg border px-3 py-1.5 text-sm font-medium"
+          style={
+            c.channel_id === selected
+              ? { background: "var(--accent)", color: "#03131f", borderColor: "var(--accent)" }
+              : { borderColor: "var(--border)", color: "var(--muted)" }
+          }
+        >
+          {c.name}
+        </Link>
+      ))}
+    </div>
+  );
+}
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +78,27 @@ export default async function PositionsPage({
   const channels = await listChannels();
   const selected =
     channel && channels.some((c) => c.channel_id === channel) ? channel : channels[0]?.channel_id;
+  const selectedChannel = channels.find((c) => c.channel_id === selected);
+
+  // The stocks channel uses a separate shares/price/fees journal.
+  if (selectedChannel?.template === "momentum_stocks") {
+    const trades = await listStockTrades(selected);
+    return (
+      <main className="mx-auto w-full max-w-[1320px] px-6 py-8">
+        <header className="mb-6">
+          <h1 className="text-2xl font-bold">{selectedChannel.name}</h1>
+          <p className="mt-1 text-sm text-[var(--muted)]">
+            <Link href="/" className="underline" style={{ color: "var(--accent)" }}>← כל היומנים</Link>{" "}
+            · יומן מניות — כמות/מחיר/עמלות · רווח/הפסד ב-$ ו-R
+          </p>
+        </header>
+        <ChannelTabs channels={channels} selected={selected} />
+        {DISCLAIMER}
+        <StockJournal trades={trades} />
+      </main>
+    );
+  }
+
   const [positions, portfolioSize] = await Promise.all([getPositions(selected), getPortfolioSize()]);
 
   const openPositions = positions.filter((p) => p.status === "open");
@@ -146,13 +201,7 @@ export default async function PositionsPage({
         </div>
       )}
 
-      <div className="mb-6 flex items-start gap-3 rounded-xl border px-4 py-3 text-sm leading-relaxed" style={{ background: "linear-gradient(135deg, rgba(245,158,11,0.12), rgba(245,158,11,0.05))", borderColor: "rgba(245,158,11,0.35)", color: "#fde68a" }}>
-        <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-base font-extrabold" style={{ background: "rgba(245,158,11,0.25)", color: "var(--gold)" }}>!</span>
-        <div>
-          <strong style={{ color: "#fcd34d" }}>אזהרה — יומן לימודי, לא המלצת השקעה.</strong>{" "}
-          העסקאות המוצגות הן תיעוד אישי של פעילות מסחר ואינן מהוות ייעוץ או שיווק השקעות, המלצה לרכישה או מכירה של נייר ערך, או תחליף לייעוץ המתחשב בנתונים ובצרכים של כל אדם. ביצועי עבר אינם מעידים על ביצועים עתידיים. מסחר בשוק ההון כרוך בסיכון משמעותי לרבות אובדן הקרן. כל פעולה שתיעשה על בסיס המידע כאן היא באחריות המשתמש בלבד.
-        </div>
-      </div>
+      {DISCLAIMER}
 
       <section className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-5">
         <Kpi label="סך רווח/הפסד ממומש" value={realized.length ? money(totalPnl) : "—"} sub={realized.length ? `ממוצע לעסקה: ${money(avgPnl)} · ${pct(totalPnlPct)}` : "מלא מחירי יציאה"} color={pnlColor(realized.length ? totalPnl : null)} />
