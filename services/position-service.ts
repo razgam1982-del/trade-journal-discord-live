@@ -175,26 +175,30 @@ function finalize(pos: Position, portfolioSize: number): void {
     const qt = ev.quantity_text?.trim() ?? '';
     const frac = exitFraction(ev);
 
-    if (/אחרונה/.test(qt)) {
-      // Leg-scoped: the latest still-open entry leg. With a fraction ("חצי מהעסקה
-      // האחרונה") realize that share of THAT leg; without one, close it fully.
-      const cand = [...open].reverse().find((o) => o.remaining > 1e-9 && o.leg.date <= ev.date);
-      if (cand) consume(cand, frac != null ? Math.min(frac, cand.remaining) : cand.remaining, ev);
+    // A reduce/close only affects legs that were already open when it happened.
+    const beforeEv = (o: { leg: PositionLeg; remaining: number }) => o.remaining > 1e-9 && o.leg.date <= ev.date;
+
+    if (/אחרונ/.test(qt)) {
+      // Leg-scoped: "עסקה אחרונה" (1 leg) or "N עסקאות אחרונות" (the N most recent
+      // legs). A fraction ("חצי מהעסקה האחרונה") applies per leg; else close fully.
+      const countMatch = qt.match(/(\d+)\s*עסק/);
+      const count = countMatch ? Math.max(1, parseInt(countMatch[1], 10)) : 1;
+      const cands = open.filter(beforeEv).sort((a, b) => b.leg.date.localeCompare(a.leg.date));
+      for (let i = 0; i < count && i < cands.length; i++) {
+        consume(cands[i], frac != null ? Math.min(frac, cands[i].remaining) : cands[i].remaining, ev);
+      }
     } else if (/היום/.test(qt)) {
-      // "של היום" — every still-open leg opened on the same day (a fraction
-      // applies per such leg; otherwise close them fully).
+      // "של היום" — every still-open leg opened on the same day.
       const d = dayOf(ev.date);
       for (const o of open) {
-        if (o.remaining > 1e-9 && o.leg.date <= ev.date && dayOf(o.leg.date) === d) {
-          consume(o, frac != null ? Math.min(frac, o.remaining) : o.remaining, ev);
-        }
+        if (beforeEv(o) && dayOf(o.leg.date) === d) consume(o, frac != null ? Math.min(frac, o.remaining) : o.remaining, ev);
       }
     } else if (frac != null) {
-      // Percentage scale-out — take `frac` of each leg's ORIGINAL size.
-      for (const o of open) consume(o, Math.min(frac, o.remaining), ev);
+      // Percentage scale-out — take `frac` of each leg open at this point.
+      for (const o of open) if (beforeEv(o)) consume(o, Math.min(frac, o.remaining), ev);
     } else if (ev.kind === 'close') {
-      // Full close — take whatever remains.
-      for (const o of open) consume(o, o.remaining, ev);
+      // Full close — take whatever remains of legs open at this point.
+      for (const o of open) if (beforeEv(o)) consume(o, o.remaining, ev);
     } else {
       ev.needs_percent = true; // reduce with no stated amount
     }
