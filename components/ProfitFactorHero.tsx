@@ -10,11 +10,17 @@ export function ProfitFactorHero({
   grossWins,
   grossLosses,
   closedCount,
+  winRate = null,
+  wins = 0,
+  losses = 0,
 }: {
   profitFactor: number | null;
   grossWins: number;
   grossLosses: number; // stored as a negative sum
   closedCount: number;
+  winRate?: number | null;
+  wins?: number;
+  losses?: number;
 }) {
   const hasClosed = closedCount > 0;
   const display = profitFactor != null ? profitFactor.toFixed(2) : hasClosed && grossWins > 0 ? "∞" : "—";
@@ -39,6 +45,9 @@ export function ProfitFactorHero({
             <div className="mt-2 text-xs text-[var(--muted)]">
               {hasClosed ? `${money(grossWins)} רווחים · ${money(Math.abs(grossLosses))} הפסדים` : "אין עדיין עסקאות סגורות"}
             </div>
+            {winRate != null && (
+              <div className="mt-1 text-[11px] text-[var(--muted)]">אחוז הצלחה {winRate.toFixed(0)}% · {wins} רווח · {losses} הפסד</div>
+            )}
           </div>
 
           {/* Second half of the explanation — left side (RTL). */}

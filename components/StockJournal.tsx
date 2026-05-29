@@ -236,11 +236,10 @@ export function StockJournal({ trades }: { trades: StockTrade[] }) {
         </div>
       </div>
 
-      <ProfitFactorHero profitFactor={profitFactor} grossWins={sumWins} grossLosses={sumLosses} closedCount={closed.length} />
+      <ProfitFactorHero profitFactor={profitFactor} grossWins={sumWins} grossLosses={sumLosses} closedCount={closed.length} winRate={winRate} wins={wins.length} losses={losses.length} />
 
       <section className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
         <Kpi label="סך רווח/הפסד (סגורות)" value={closed.length ? money(totalPL) : "—"} sub={closed.length ? `ממוצע לעסקה: ${money(avgPL)}` : undefined} color={plColor(closed.length ? totalPL : null)} />
-        <Kpi label="% הצלחה" value={winRate != null ? `${winRate.toFixed(1)}%` : "—"} sub={`${wins.length} רווחים · ${losses.length} הפסדים`} color={ACCENT} />
         <Kpi label="ממוצע עסקה מרוויחה" value={wins.length ? money(avgWin) : "—"} sub={`סה״כ רווחים: ${money(sumWins)}`} color={wins.length ? GREEN : undefined} />
         <Kpi label="ממוצע עסקה מפסידה" value={losses.length ? money(avgLoss) : "—"} sub={`סה״כ הפסדים: ${money(sumLosses)}`} color={losses.length ? RED : undefined} />
         <Kpi label="העסקה הטובה ביותר" value={best ? money(best.c.pl) : "—"} sub={best ? `${best.t.symbol} · ${rstr(best.c.rr)}` : undefined} color={best ? GREEN : undefined} />

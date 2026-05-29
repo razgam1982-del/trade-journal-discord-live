@@ -223,18 +223,30 @@ export default async function PositionsPage({
 
       <Disclaimer />
 
-      <ProfitFactorHero profitFactor={profitFactor} grossWins={sumWins} grossLosses={sumLosses} closedCount={realized.length} />
+      <ProfitFactorHero profitFactor={profitFactor} grossWins={sumWins} grossLosses={sumLosses} closedCount={realized.length} winRate={winRate} wins={wins.length} losses={losses.length} />
 
-      <section className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-5">
-        <Kpi label="סך רווח/הפסד ממומש" value={realized.length ? money(totalPnl) : "—"} sub={realized.length ? `ממוצע לעסקה: ${money(avgPnl)} · ${pct(totalPnlPct)}` : "מלא מחירי יציאה"} color={pnlColor(realized.length ? totalPnl : null)} />
-        <Kpi label="רווח פתוח על השולחן" value={hasUnrealized ? money(openUnrealized) : "—"} sub="רווח/הפסד פתוח · לפי מחיר נוכחי" color={pnlColor(hasUnrealized ? openUnrealized : null)} />
-        <Kpi label="אחוז הצלחה" value={winRate != null ? `${winRate.toFixed(0)}%` : "—"} sub={`${wins.length} רווח · ${losses.length} הפסד`} color="var(--accent)" />
-        <Kpi label="ממוצע עסקה מרוויחה" value={wins.length ? money(avgWin) : "—"} sub={`סה״כ רווחים: ${money(sumWins)}`} color={wins.length ? "var(--green)" : undefined} />
-        <Kpi label="ממוצע עסקה מפסידה" value={losses.length ? money(avgLoss) : "—"} sub={`סה״כ הפסדים: ${money(sumLosses)}`} color={losses.length ? "var(--red)" : undefined} />
-        <Kpi label="העסקה הטובה ביותר" value={best ? money(best.pnl_dollars) : "—"} sub={best ? `${best.asset}${r(best)}` : "—"} color={best ? "var(--green)" : undefined} />
-        <Kpi label="העסקה הגרועה ביותר" value={worst ? money(worst.pnl_dollars) : "—"} sub={worst ? `${worst.asset}${r(worst)}` : "—"} color={worst ? "var(--red)" : undefined} />
-        <Kpi label="סיכון פתוח" value={`${openRisk.toFixed(2)}%`} sub={`${openCount} פוזיציות פתוחות`} color="var(--gold)" />
-        <Kpi label="פוטנציאל עסקאות פתוחות" value={`+${openPotential.toFixed(2)}%`} sub={`עד הטייק־פרופיט · ${openPotentialCount} עם יעד`} color="var(--green)" />
+      <section className="mb-6 flex flex-col gap-4 lg:flex-row">
+        {/* ימין — ביצועים (כל השאר) */}
+        <div className="rounded-2xl border-2 border-[var(--border)] p-4 lg:flex-[2]">
+          <h3 className="mb-3 text-sm font-bold text-[var(--muted)]">ביצועים</h3>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+            <Kpi label="סך רווח/הפסד ממומש" value={realized.length ? money(totalPnl) : "—"} sub={realized.length ? `ממוצע לעסקה: ${money(avgPnl)} · ${pct(totalPnlPct)}` : "מלא מחירי יציאה"} color={pnlColor(realized.length ? totalPnl : null)} />
+            <Kpi label="רווח פתוח על השולחן" value={hasUnrealized ? money(openUnrealized) : "—"} sub="רווח/הפסד פתוח · לפי מחיר נוכחי" color={pnlColor(hasUnrealized ? openUnrealized : null)} />
+            <Kpi label="ממוצע עסקה מרוויחה" value={wins.length ? money(avgWin) : "—"} sub={`סה״כ רווחים: ${money(sumWins)}`} color={wins.length ? "var(--green)" : undefined} />
+            <Kpi label="ממוצע עסקה מפסידה" value={losses.length ? money(avgLoss) : "—"} sub={`סה״כ הפסדים: ${money(sumLosses)}`} color={losses.length ? "var(--red)" : undefined} />
+            <Kpi label="העסקה הטובה ביותר" value={best ? money(best.pnl_dollars) : "—"} sub={best ? `${best.asset}${r(best)}` : "—"} color={best ? "var(--green)" : undefined} />
+            <Kpi label="העסקה הגרועה ביותר" value={worst ? money(worst.pnl_dollars) : "—"} sub={worst ? `${worst.asset}${r(worst)}` : "—"} color={worst ? "var(--red)" : undefined} />
+          </div>
+        </div>
+
+        {/* שמאל — פוטנציאל על העסקאות הפתוחות */}
+        <div className="rounded-2xl border-2 p-4 lg:flex-1" style={{ borderColor: "rgba(56,189,248,0.4)" }}>
+          <h3 className="mb-3 text-sm font-bold text-[var(--muted)]">פוטנציאל עסקאות פתוחות</h3>
+          <div className="grid grid-cols-1 gap-3">
+            <Kpi label="פוטנציאל רווח" value={`+${openPotential.toFixed(2)}%`} sub={`עד הטייק־פרופיט · ${openPotentialCount} עם יעד`} color="var(--green)" />
+            <Kpi label="פוטנציאל הפסד" value={`-${openRisk.toFixed(2)}%`} sub={`אם ייפגעו הסטופים · ${openCount} פוזיציות`} color="var(--red)" />
+          </div>
+        </div>
       </section>
 
       <section className="mb-6">
