@@ -35,7 +35,7 @@ function plColor(n: number | null): string | undefined {
 }
 
 const TH = "sticky top-0 bg-[var(--panel-2)] px-3 py-2.5 text-right text-xs font-semibold text-[var(--muted)] whitespace-nowrap border-b border-[var(--border)]";
-const TD = "px-3 py-2.5 border-b border-[var(--border)] whitespace-nowrap";
+const TD = "px-3 py-4 border-b border-[var(--border)] whitespace-nowrap align-middle";
 
 function Badge({ result, partial }: { result: string; partial: boolean }) {
   const map: Record<string, { t: string; bg: string; c: string }> = {
@@ -302,7 +302,7 @@ export function PositionsTable({ positions }: { positions: Position[] }) {
                     {!hasR ? (
                       "—"
                     ) : (
-                      <div className="flex flex-col gap-0.5 text-xs leading-tight">
+                      <div className="flex flex-col gap-1.5 text-sm leading-relaxed">
                         <div>
                           <span className="text-[var(--muted)]">ממומש </span>
                           <span style={{ color: plColor(p.r_achieved) }}>{p.r_achieved != null ? `${p.r_achieved.toFixed(2)}R` : "—"}</span>
@@ -313,7 +313,7 @@ export function PositionsTable({ positions }: { positions: Position[] }) {
                               <span className="text-[var(--muted)]">פתוח </span>
                               <span style={{ color: plColor(p.unrealized_r) }}>{`${p.unrealized_r.toFixed(2)}R`}</span>
                             </div>
-                            <div className="border-t border-[var(--border)] pt-0.5">
+                            <div className="border-t border-[var(--border)] pt-1.5">
                               <span className="text-[var(--muted)]">סך </span>
                               <span className="font-bold" style={{ color: plColor(totalR) }}>{totalR != null ? `${totalR.toFixed(2)}R` : "—"}</span>
                             </div>
