@@ -151,6 +151,7 @@ export default async function PositionsPage({
   // Chart data. Effective P/L = realized if closed, else unrealized.
   const eff = (p: (typeof positions)[number]) => p.pnl_dollars ?? p.unrealized_pnl_dollars ?? null;
   const equity: { label: string; value: number }[] = [];
+  if (realized.length) equity.push({ label: "התחלה", value: 0 });
   let cum = 0;
   for (const p of [...realized].sort((a, b) => (a.closed_at ?? a.opened_at).localeCompare(b.closed_at ?? b.opened_at))) {
     cum += p.pnl_dollars ?? 0;

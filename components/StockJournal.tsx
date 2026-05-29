@@ -136,10 +136,11 @@ export function StockJournal({ trades }: { trades: StockTrade[] }) {
     (a, b) => a.t.trade_date.localeCompare(b.t.trade_date) || a.t.seq - b.t.seq,
   );
   let cum = 0;
-  const equity = closedByDate.map((r) => {
+  const equityPoints = closedByDate.map((r) => {
     cum += r.c.pl;
     return { label: `${r.t.symbol} ${isoToDisplay(r.t.trade_date).slice(0, 5)}`, value: Math.round(cum) };
   });
+  const equity = closedByDate.length ? [{ label: "התחלה", value: 0 }, ...equityPoints] : equityPoints;
   const avgComparison = [
     { label: "רווח ממוצע", value: Math.round(avgWin) },
     { label: "הפסד ממוצע", value: Math.round(avgLoss) },
