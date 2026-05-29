@@ -41,9 +41,6 @@ export interface ParsedSignal {
   // reduce/close: the execution price stated in the message ("לסגור 20% במחיר
   // 4442" → 4442). Null for entries/commentary. Written to exit_price on save.
   exit_price: number | null;
-  // the live price explicitly written as "מחיר נוכחי"/"מחיר כעת" — updates the
-  // asset's current market price (marks open legs to market). Null if not stated.
-  current_price: number | null;
   risk_percent: number | null;
   stop_price: number | null;
   tp_price: number | null;

@@ -3,7 +3,6 @@ import { saveDiscordMessage } from '@/services/discord-message-service';
 import { parseTradeMessage, parseStockMessage } from '@/services/trade-parser-service';
 import { upsertTradeSignal, replaceMessageSignals } from '@/services/trade-signal-service';
 import { getChannel } from '@/services/channel-service';
-import { setMarketPrice } from '@/services/market-price-service';
 import type { DiscordMessagePayload } from '@/types';
 
 export async function POST(req: NextRequest) {
@@ -54,9 +53,6 @@ export async function POST(req: NextRequest) {
       } else {
         const parsed = await parseTradeMessage(saved.raw_content);
         await upsertTradeSignal(saved.id, parsed);
-        if (parsed.current_price != null && parsed.asset) {
-          await setMarketPrice(parsed.asset, parsed.current_price);
-        }
       }
     } catch (err) {
       console.error(`Parse/persist failed for message ${saved.id}:`, err);

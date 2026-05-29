@@ -3,7 +3,6 @@ import { saveDiscordMessage } from '@/services/discord-message-service';
 import { parseTradeMessage, parseStockMessage } from '@/services/trade-parser-service';
 import { upsertTradeSignal, replaceMessageSignals } from '@/services/trade-signal-service';
 import { getChannel } from '@/services/channel-service';
-import { setMarketPrice } from '@/services/market-price-service';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
@@ -43,10 +42,6 @@ export async function POST(req: NextRequest) {
       } else {
         const parsed = await parseTradeMessage(saved.raw_content);
         await upsertTradeSignal(saved.id, parsed);
-        // A stated "מחיר נוכחי"/"מחיר כעת" updates the asset's current market price.
-        if (parsed.current_price != null && parsed.asset) {
-          await setMarketPrice(parsed.asset, parsed.current_price);
-        }
         results.push({
           id: m.discord_message_id,
           is_trade: parsed.is_trade,
