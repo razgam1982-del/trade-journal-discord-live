@@ -34,8 +34,6 @@ function isoToDisplay(iso: string): string {
   return `${d}.${m}.${y}`;
 }
 
-const TH = "sticky top-0 bg-[var(--panel-2)] px-3 py-2.5 text-right text-xs font-semibold text-[var(--muted)] whitespace-nowrap border-b border-[var(--border)]";
-const TD = "px-3 py-2.5 border-b border-[var(--border)] whitespace-nowrap tabular-nums";
 
 type LegForm = { p: string; q: string; f: string };
 type Form = {
@@ -133,7 +131,6 @@ function LegRows({ title, legs }: { title: string; legs: StockLeg[] }) {
 export function StockJournal({ trades }: { trades: StockTrade[] }) {
   const canEdit = useCanEdit();
   const [busy, startTransition] = useTransition();
-  const [view, setView] = useState<"table" | "cards">("table");
   const [compact, setCompact] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const toggleExpand = (id: string) =>
@@ -296,27 +293,15 @@ export function StockJournal({ trades }: { trades: StockTrade[] }) {
       <section>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-base font-semibold">פירוט עסקאות</h2>
-          <div className="flex items-center gap-2">
-            {view === "cards" && (
-              <button
-                onClick={() => setCompact((c) => !c)}
-                className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-semibold text-[var(--muted)] hover:bg-[rgba(56,189,248,0.08)]"
-              >
-                {compact ? "▼ הצג תצוגה מלאה" : "▲ צמצם תצוגה (שורה ראשית בלבד)"}
-              </button>
-            )}
-            <button
-              onClick={() => setView((v) => (v === "table" ? "cards" : "table"))}
-              className="rounded-lg px-3 py-1.5 text-xs font-bold"
-              style={{ background: "rgba(56,189,248,0.16)", color: "#7dd3fc" }}
-            >
-              {view === "table" ? "🧪 נסה תצוגת כרטיסים" : "↩ חזרה לטבלה"}
-            </button>
-          </div>
+          <button
+            onClick={() => setCompact((c) => !c)}
+            className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-semibold text-[var(--muted)] hover:bg-[rgba(56,189,248,0.08)]"
+          >
+            {compact ? "▼ הצג תצוגה מלאה" : "▲ צמצם תצוגה (שורה ראשית בלבד)"}
+          </button>
         </div>
 
-        {view === "cards" ? (
-          <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3">
             {rows.map(({ t, c }, i) => {
               const border = c.result === "win" ? GREEN : c.result === "loss" ? RED : ACCENT;
               const isOpen = expanded.has(t.id);
@@ -386,51 +371,6 @@ export function StockJournal({ trades }: { trades: StockTrade[] }) {
               );
             })}
           </div>
-        ) : (
-        <div className="overflow-auto rounded-2xl border border-[var(--border)] bg-[var(--panel)] p-2">
-          <table className="w-full border-separate border-spacing-0 text-sm">
-            <thead>
-              <tr>
-                {["#", "תאריך", "סימבול", "כיוון", "ממוצע כניסה", "ממוצע יציאה", "כמות נכנסת", "כמות יצאת", "פוזיציה $", "עמלות", "סיכון $", "P/L $", "תשואה %", "R/R", "תוצאה", ""].map((h, i) => (
-                  <th key={i} className={TH}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map(({ t, c }, i) => {
-                const border = c.result === "win" ? GREEN : c.result === "loss" ? RED : ACCENT;
-                return (
-                  <tr key={t.id} className="hover:bg-[rgba(56,189,248,0.04)]" style={{ boxShadow: `inset 4px 0 0 0 ${border}` }}>
-                    <td className={`${TD} text-[var(--muted)]`}>{i + 1}</td>
-                    <td className={`${TD} text-[var(--muted)]`}>{isoToDisplay(t.trade_date)}</td>
-                    <td className={`${TD} font-semibold`}>
-                      {t.symbol}
-                      {c.partial && <span className="ms-1.5 rounded-full px-2 py-0.5 text-[10px]" style={{ background: "rgba(245,158,11,0.15)", color: "var(--gold)" }}>חלקי</span>}
-                    </td>
-                    <td className={TD} style={{ color: t.direction === "long" ? GREEN : RED }}>{t.direction === "long" ? "לונג" : "שורט"}</td>
-                    <td className={TD}>{c.totalQin > 0 ? `$${c.avgEntry.toFixed(2)}` : "—"}</td>
-                    <td className={TD}>{c.totalQout > 0 ? `$${c.avgExit.toFixed(2)}` : "—"}</td>
-                    <td className={TD}>{c.totalQin.toLocaleString()}</td>
-                    <td className={TD}>{c.totalQout.toLocaleString()}</td>
-                    <td className={TD}>{money(c.positionDollar)}</td>
-                    <td className={TD}>{money(c.fees)}</td>
-                    <td className={TD}>{money(t.risk_dollars)}</td>
-                    <td className={`${TD} font-semibold`} style={{ color: c.result === "open" ? undefined : plColor(c.pl) }}>{c.result === "open" ? "—" : money(c.pl)}</td>
-                    <td className={TD} style={{ color: c.result === "open" ? undefined : plColor(c.pct) }}>{c.result === "open" ? "—" : pct(c.pct)}</td>
-                    <td className={TD} style={{ color: c.result === "open" ? undefined : plColor(c.rr) }}>{c.result === "open" ? "—" : rstr(c.rr)}</td>
-                    <td className={TD}><Badge result={c.result} partial={c.partial} /></td>
-                    <td className={`${TD} text-left`}>
-                      {canEdit && (
-                        <button onClick={() => openEdit(t)} className="rounded px-2 py-1 text-xs" style={{ color: ACCENT, border: "1px solid var(--border)" }}>ערוך</button>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-        )}
       </section>
 
       {open && (
