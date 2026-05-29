@@ -25,23 +25,26 @@ export function ProfitFactorHero({
       : "#ef4444";
   return (
     <section className="mb-6">
-      <div
-        className="flex flex-col gap-4 rounded-2xl border-2 p-5 sm:flex-row sm:items-center sm:justify-between"
-        style={{ borderColor: color, background: "var(--panel)" }}
-      >
-        <div className="max-w-2xl">
-          <div className="text-base font-bold">מכפיל רווח/הפסד</div>
-          <p className="mt-1 text-sm leading-relaxed text-[var(--muted)]">
-            כמה דולר הרווחת על כל דולר שהפסדת (סך כל הרווחים ÷ סך כל ההפסדים). זה המדד המשמעותי באמת —
-            הוא מנטרל את אחוז ההצלחה: אפשר לנצח רק ב-10% מהעסקאות ועדיין להיות רווחי מאוד אם הרווחים
-            גדולים מההפסדים, וגם להפך. ערך מעל 1 = רווחי; ככל שגבוה יותר, כל דולר בסיכון מחזיר יותר.
+      <div className="rounded-2xl border-2 p-5" style={{ borderColor: color, background: "var(--panel)" }}>
+        <div className="flex flex-col items-center gap-5 md:flex-row md:justify-between">
+          {/* First half of the explanation — right side (RTL). */}
+          <p className="flex-1 text-sm leading-relaxed text-[var(--muted)] md:text-right">
+            כמה דולר הרווחת על כל דולר שהפסדת (סך כל הרווחים ÷ סך כל ההפסדים). זה המדד המשמעותי באמת — הוא מנטרל את אחוז ההצלחה.
           </p>
-        </div>
-        <div className="shrink-0 text-center sm:text-left">
-          <div className="text-6xl font-extrabold leading-none tabular-nums" style={{ color }}>{display}</div>
-          <div className="mt-2 text-xs text-[var(--muted)]">
-            {hasClosed ? `${money(grossWins)} רווחים · ${money(Math.abs(grossLosses))} הפסדים` : "אין עדיין עסקאות סגורות"}
+
+          {/* The number — center. */}
+          <div className="shrink-0 px-2 text-center">
+            <div className="text-sm font-bold">מכפיל רווח/הפסד</div>
+            <div className="text-6xl font-extrabold leading-none tabular-nums" style={{ color }}>{display}</div>
+            <div className="mt-2 text-xs text-[var(--muted)]">
+              {hasClosed ? `${money(grossWins)} רווחים · ${money(Math.abs(grossLosses))} הפסדים` : "אין עדיין עסקאות סגורות"}
+            </div>
           </div>
+
+          {/* Second half of the explanation — left side (RTL). */}
+          <p className="flex-1 text-sm leading-relaxed text-[var(--muted)] md:text-left">
+            אפשר לנצח רק ב-10% מהעסקאות ועדיין להיות רווחי מאוד אם הרווחים גדולים מההפסדים, וגם להפך. ערך מעל 1 = רווחי; ככל שגבוה יותר, כל דולר בסיכון מחזיר יותר.
+          </p>
         </div>
       </div>
     </section>
