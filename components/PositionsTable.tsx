@@ -226,6 +226,7 @@ export function PositionsTable({ positions }: { positions: Position[] }) {
             <th className={TH}>כיוון</th>
             <th className={TH}>ממוצע כניסה</th>
             <th className={TH}>ממוצע יציאה</th>
+            <th className={TH}>מחיר נוכחי</th>
             <th className={TH}>סיכון %</th>
             <th className={TH}>R</th>
             <th className={TH}>מומש $</th>
@@ -270,6 +271,9 @@ export function PositionsTable({ positions }: { positions: Position[] }) {
                   </td>
                   <td className={`${TD} tabular-nums`}>{p.avg_entry_price != null ? p.avg_entry_price.toFixed(2) : "—"}</td>
                   <td className={`${TD} tabular-nums`}>{p.avg_exit_price != null ? p.avg_exit_price.toFixed(2) : "—"}</td>
+                  <td className={`${TD} tabular-nums`} onClick={(e) => e.stopPropagation()}>
+                    {p.status === "open" ? <EditableCurrentPrice asset={p.asset} value={p.current_price} /> : "—"}
+                  </td>
                   <td className={`${TD} tabular-nums`}>{p.total_risk_percent.toFixed(2)}%</td>
                   <td className={`${TD} tabular-nums`} style={{ color: plColor(totalR) }}>{totalR != null ? `${totalR.toFixed(2)}R` : "—"}</td>
                   <td className={`${TD} tabular-nums font-semibold`} style={{ color: plColor(realized$) }}>{realized$ != null ? money(realized$) : "—"}</td>
@@ -281,7 +285,7 @@ export function PositionsTable({ positions }: { positions: Position[] }) {
                 </tr>
                 {isOpen && (
                   <tr>
-                    <td colSpan={14} className="border-b border-[var(--border)] p-0">
+                    <td colSpan={15} className="border-b border-[var(--border)] p-0">
                       <LegsDetail p={p} />
                     </td>
                   </tr>

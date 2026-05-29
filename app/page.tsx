@@ -2,6 +2,7 @@ import Link from "next/link";
 import { listChannels } from "@/services/channel-service";
 import { getPositions } from "@/services/position-service";
 import { listStockTrades, calcStockTrade } from "@/services/stock-trade-service";
+import { Disclaimer } from "@/components/Disclaimer";
 
 export const dynamic = "force-dynamic";
 
@@ -37,9 +38,11 @@ export default async function Home() {
   return (
     <main className="mx-auto w-full max-w-4xl px-6 py-12">
       <header className="mb-8 text-center">
-        <h1 className="text-3xl font-bold">יומני מסחר — דיסקורד לייב</h1>
+        <h1 className="text-3xl font-bold">יומני מסחר — דיסקורד</h1>
         <p className="mt-2 text-sm text-[var(--muted)]">בחר ערוץ כדי לפתוח את היומן והתיעוד מהדיסקורד</p>
       </header>
+
+      <Disclaimer />
 
       <div className="grid gap-4 sm:grid-cols-2">
         {summaries.map(({ channel: c, total, open, realizedPnl, hasRealized }) => (

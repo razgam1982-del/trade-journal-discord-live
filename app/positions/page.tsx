@@ -7,16 +7,7 @@ import { EditablePortfolioSize } from "@/components/EditablePortfolioSize";
 import { PositionsCharts } from "@/components/PositionsCharts";
 import { PositionsTable } from "@/components/PositionsTable";
 import { StockJournal } from "@/components/StockJournal";
-
-const DISCLAIMER = (
-  <div className="mb-6 flex items-start gap-3 rounded-xl border px-4 py-3 text-base leading-relaxed" style={{ background: "linear-gradient(135deg, rgba(245,158,11,0.12), rgba(245,158,11,0.05))", borderColor: "rgba(245,158,11,0.35)", color: "#fde68a" }}>
-    <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-base font-extrabold" style={{ background: "rgba(245,158,11,0.25)", color: "var(--gold)" }}>!</span>
-    <div>
-      <strong style={{ color: "#fcd34d" }}>אזהרה — יומן לימודי, סימולציות בלבד ללא כסף אמיתי.</strong>{" "}
-      יומן המסחר הינו לימודי ומורכב מסימולציות בלבד, ללא מסחר בכסף אמיתי — כסף מדומה ולא אמיתי, למטרות לימודיות, בידוריות והעשרה בלבד. אין באמור משום ייעוץ או שיווק השקעות, המלצה לרכישה או מכירה של נייר ערך, או תחליף לייעוץ המתחשב בנתונים ובצרכים של כל אדם. ביצועי עבר אינם מעידים על ביצועים עתידיים. כל פעולה שתיעשה על בסיס המידע כאן היא באחריות המשתמש בלבד.
-    </div>
-  </div>
-);
+import { Disclaimer } from "@/components/Disclaimer";
 
 function ChannelTabs({ channels, selected }: { channels: { channel_id: string; name: string }[]; selected?: string }) {
   if (channels.length <= 1) return null;
@@ -93,7 +84,7 @@ export default async function PositionsPage({
           </p>
         </header>
         <ChannelTabs channels={channels} selected={selected} />
-        {DISCLAIMER}
+        <Disclaimer />
         <StockJournal trades={trades} />
       </main>
     );
@@ -161,7 +152,7 @@ export default async function PositionsPage({
     <main className="mx-auto w-full max-w-[1320px] px-6 py-8">
       <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">יומן מסחר — דיסקורד לייב</h1>
+          <h1 className="text-2xl font-bold">יומן מסחר — דיסקורד</h1>
           <p className="mt-1 text-sm text-[var(--muted)]">
             <Link href="/" className="underline" style={{ color: "var(--accent)" }}>
               ← כל היומנים
@@ -201,7 +192,7 @@ export default async function PositionsPage({
         </div>
       )}
 
-      {DISCLAIMER}
+      <Disclaimer />
 
       <section className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-5">
         <Kpi label="סך רווח/הפסד ממומש" value={realized.length ? money(totalPnl) : "—"} sub={realized.length ? `ממוצע לעסקה: ${money(avgPnl)} · ${pct(totalPnlPct)}` : "מלא מחירי יציאה"} color={pnlColor(realized.length ? totalPnl : null)} />
