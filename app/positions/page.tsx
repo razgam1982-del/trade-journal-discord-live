@@ -196,7 +196,7 @@ export default async function PositionsPage({
 
       <section className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-5">
         <Kpi label="סך רווח/הפסד ממומש" value={realized.length ? money(totalPnl) : "—"} sub={realized.length ? `ממוצע לעסקה: ${money(avgPnl)} · ${pct(totalPnlPct)}` : "מלא מחירי יציאה"} color={pnlColor(realized.length ? totalPnl : null)} />
-        <Kpi label="רווח פתוח על השולחן" value={hasUnrealized ? money(openUnrealized) : "—"} sub="לא ממומש · לפי מחיר נוכחי" color={pnlColor(hasUnrealized ? openUnrealized : null)} />
+        <Kpi label="רווח פתוח על השולחן" value={hasUnrealized ? money(openUnrealized) : "—"} sub="רווח/הפסד פתוח · לפי מחיר נוכחי" color={pnlColor(hasUnrealized ? openUnrealized : null)} />
         <Kpi label="אחוז הצלחה" value={winRate != null ? `${winRate.toFixed(0)}%` : "—"} sub={`${wins.length} רווח · ${losses.length} הפסד`} color="var(--accent)" />
         <Kpi label="ממוצע עסקה מרוויחה" value={wins.length ? money(avgWin) : "—"} sub={`סה״כ רווחים: ${money(sumWins)}`} color={wins.length ? "var(--green)" : undefined} />
         <Kpi label="ממוצע עסקה מפסידה" value={losses.length ? money(avgLoss) : "—"} sub={`סה״כ הפסדים: ${money(sumLosses)}`} color={losses.length ? "var(--red)" : undefined} />

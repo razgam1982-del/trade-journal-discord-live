@@ -63,9 +63,9 @@ function LegsDetail({ p }: { p: Position }) {
     <div className="bg-[var(--panel-2)] p-3">
       <div className="mb-3 flex flex-col gap-1 text-sm tabular-nums">
         <div className="font-semibold">
-          <span className="text-[var(--muted)]">רווח/הפסד מומש</span>
+          <span className="text-[var(--muted)]">רווח/הפסד ממומש</span>
           {p.closed_fraction > 0 && (
-            <span className="ms-2 rounded px-1.5 py-0.5 text-[11px]" style={{ background: "rgba(245,158,11,0.15)", color: "var(--gold)" }}>מומש {Math.round(p.closed_fraction * 100)}%</span>
+            <span className="ms-2 rounded px-1.5 py-0.5 text-[11px]" style={{ background: "rgba(245,158,11,0.15)", color: "var(--gold)" }}>ממומש {Math.round(p.closed_fraction * 100)}%</span>
           )}
         </div>
         <div className="ms-3 flex flex-col gap-0.5">
@@ -87,7 +87,7 @@ function LegsDetail({ p }: { p: Position }) {
             </div>
           </>
         )}
-        <div className="mt-1 border-t border-[var(--border)] pt-1 font-semibold">סך הכל (מומש + לא ממומש)</div>
+        <div className="mt-1 border-t border-[var(--border)] pt-1 font-semibold">סך הכל (ממומש + פתוח)</div>
         <div className="ms-3 flex flex-col gap-0.5">
           <div><span className="text-[var(--muted)]">סכום $: </span><span className="font-bold" style={{ color: plColor(total$) }}>{total$ != null ? money(total$) : "—"}</span></div>
           <div><span className="text-[var(--muted)]">תשואה %: </span><span style={{ color: plColor(totalPct) }}>{totalPct != null ? pct(totalPct) : "—"}</span></div>
@@ -120,7 +120,7 @@ function LegsDetail({ p }: { p: Position }) {
       <table className="w-full border-separate border-spacing-0 text-sm">
         <thead>
           <tr>
-            {["תאריך", "סוג", "פרט", "מחיר כניסה/יציאה", "סטופ", "טייק", "סיכון", "מומש $", "פתוח $", ""].map((h, i) => (
+            {["תאריך", "סוג", "פרט", "מחיר כניסה/יציאה", "סטופ", "טייק", "סיכון", "ממומש $", "פתוח $", ""].map((h, i) => (
               <th key={i} className="border-b border-[var(--border)] px-2 py-1.5 text-right text-xs text-[var(--muted)]">{h}</th>
             ))}
           </tr>
@@ -252,8 +252,8 @@ export function PositionsTable({ positions }: { positions: Position[] }) {
             <th className={TH}>מחיר נוכחי</th>
             <th className={TH}>סיכון %</th>
             <th className={TH}>R</th>
-            <th className={TH}>מומש $</th>
-            <th className={TH}>לא ממומש $</th>
+            <th className={TH}>ממומש $</th>
+            <th className={TH}>פתוח $</th>
             <th className={TH}>סך הכל $</th>
             <th className={TH}>תשואה %</th>
             <th className={TH}>תוצאה</th>
@@ -304,7 +304,7 @@ export function PositionsTable({ positions }: { positions: Position[] }) {
                     ) : (
                       <div className="flex flex-col gap-0.5 text-xs leading-tight">
                         <div>
-                          <span className="text-[var(--muted)]">מומש </span>
+                          <span className="text-[var(--muted)]">ממומש </span>
                           <span style={{ color: plColor(p.r_achieved) }}>{p.r_achieved != null ? `${p.r_achieved.toFixed(2)}R` : "—"}</span>
                         </div>
                         {p.unrealized_r != null && (
