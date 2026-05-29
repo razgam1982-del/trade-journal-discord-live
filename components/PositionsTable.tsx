@@ -231,6 +231,7 @@ function LegsTable({ p }: { p: Position }) {
 
 export function PositionsTable({ positions }: { positions: Position[] }) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [compact, setCompact] = useState(false);
   const toggle = (k: string) =>
     setExpanded((prev) => {
       const n = new Set(prev);
@@ -249,6 +250,14 @@ export function PositionsTable({ positions }: { positions: Position[] }) {
 
   return (
     <div className="flex flex-col gap-3">
+      <div className="flex justify-end">
+        <button
+          onClick={() => setCompact((c) => !c)}
+          className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-semibold text-[var(--muted)] hover:bg-[rgba(56,189,248,0.08)]"
+        >
+          {compact ? "▼ הצג תצוגה מלאה" : "▲ צמצם תצוגה (שורה ראשית בלבד)"}
+        </button>
+      </div>
       {positions.map((p, i) => {
         const result = p.status === "open" ? "open" : (p.pnl_dollars ?? 0) >= 0 ? "win" : "loss";
         const border = result === "win" ? GREEN : result === "loss" ? RED : ACCENT;
@@ -294,25 +303,30 @@ export function PositionsTable({ positions }: { positions: Position[] }) {
               </div>
             </div>
 
-            {/* Aggregate metrics — always visible */}
-            <div className="border-t border-[var(--border)] px-4 py-3">
-              <Summary p={p} />
-            </div>
+            {/* Everything below the top line is hidden in compact view. */}
+            {!compact && (
+              <>
+                {/* Aggregate metrics — always visible */}
+                <div className="border-t border-[var(--border)] px-4 py-3">
+                  <Summary p={p} />
+                </div>
 
-            {/* Prominent expand control */}
-            <button
-              onClick={() => toggle(key)}
-              className="flex w-full items-center justify-center gap-2 border-t border-[var(--border)] py-3 text-sm font-bold tracking-wide transition-colors hover:brightness-125"
-              style={{ background: "rgba(56,189,248,0.16)", color: "#7dd3fc" }}
-            >
-              {isOpen ? "סגור פירוט ▲" : "לחצו לפירוט מלא ▼"}
-            </button>
+                {/* Prominent expand control */}
+                <button
+                  onClick={() => toggle(key)}
+                  className="flex w-full items-center justify-center gap-2 border-t border-[var(--border)] py-3 text-sm font-bold tracking-wide transition-colors hover:brightness-125"
+                  style={{ background: "rgba(56,189,248,0.16)", color: "#7dd3fc" }}
+                >
+                  {isOpen ? "סגור פירוט ▲" : "לחצו לפירוט מלא ▼"}
+                </button>
 
-            {/* Per-leg breakdown — on expand */}
-            {isOpen && (
-              <div className="overflow-x-auto border-t border-[var(--border)] bg-[var(--panel-2)] p-3">
-                <LegsTable p={p} />
-              </div>
+                {/* Per-leg breakdown — on expand */}
+                {isOpen && (
+                  <div className="overflow-x-auto border-t border-[var(--border)] bg-[var(--panel-2)] p-3">
+                    <LegsTable p={p} />
+                  </div>
+                )}
+              </>
             )}
           </div>
         );
