@@ -5,6 +5,7 @@ import type { StockTrade, StockTradeInput, StockLeg } from "@/types";
 import { calcStockTrade } from "@/lib/stock-calc";
 import { PositionsCharts } from "./PositionsCharts";
 import { ProfitFactorHero } from "./ProfitFactorHero";
+import { DeleteButton } from "./DeleteButton";
 import { saveStockTrade, removeStockTrade } from "@/app/stocks/actions";
 import { useCanEdit } from "@/components/EditMode";
 
@@ -98,9 +99,50 @@ function Badge({ result, partial }: { result: string; partial: boolean }) {
   );
 }
 
+// Entry/exit legs of a stock trade (price × qty, fee) — shown when a card expands.
+function LegRows({ title, legs }: { title: string; legs: StockLeg[] }) {
+  return (
+    <div className="rounded-lg border border-[var(--border)] p-2">
+      <div className="mb-1 text-xs font-semibold text-[var(--muted)]">{title}</div>
+      {legs.length === 0 ? (
+        <div className="text-xs text-[var(--muted)]">—</div>
+      ) : (
+        <table className="w-full text-sm tabular-nums">
+          <thead>
+            <tr className="text-[11px] text-[var(--muted)]">
+              <th className="py-1 text-right font-normal">מחיר</th>
+              <th className="py-1 text-right font-normal">כמות</th>
+              <th className="py-1 text-right font-normal">עמלה</th>
+            </tr>
+          </thead>
+          <tbody>
+            {legs.map((l, idx) => (
+              <tr key={idx} className="border-t border-[var(--border)]">
+                <td className="py-1">${l.p.toFixed(2)}</td>
+                <td className="py-1">{l.q.toLocaleString()}</td>
+                <td className="py-1">${l.f.toFixed(2)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}
+
 export function StockJournal({ trades }: { trades: StockTrade[] }) {
   const canEdit = useCanEdit();
   const [busy, startTransition] = useTransition();
+  const [view, setView] = useState<"table" | "cards">("table");
+  const [compact, setCompact] = useState(false);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const toggleExpand = (id: string) =>
+    setExpanded((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingSeq, setEditingSeq] = useState<number | null>(null);
@@ -252,7 +294,99 @@ export function StockJournal({ trades }: { trades: StockTrade[] }) {
       </section>
 
       <section>
-        <h2 className="mb-3 text-base font-semibold">פירוט עסקאות</h2>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-base font-semibold">פירוט עסקאות</h2>
+          <div className="flex items-center gap-2">
+            {view === "cards" && (
+              <button
+                onClick={() => setCompact((c) => !c)}
+                className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-semibold text-[var(--muted)] hover:bg-[rgba(56,189,248,0.08)]"
+              >
+                {compact ? "▼ הצג תצוגה מלאה" : "▲ צמצם תצוגה (שורה ראשית בלבד)"}
+              </button>
+            )}
+            <button
+              onClick={() => setView((v) => (v === "table" ? "cards" : "table"))}
+              className="rounded-lg px-3 py-1.5 text-xs font-bold"
+              style={{ background: "rgba(56,189,248,0.16)", color: "#7dd3fc" }}
+            >
+              {view === "table" ? "🧪 נסה תצוגת כרטיסים" : "↩ חזרה לטבלה"}
+            </button>
+          </div>
+        </div>
+
+        {view === "cards" ? (
+          <div className="flex flex-col gap-3">
+            {rows.map(({ t, c }, i) => {
+              const border = c.result === "win" ? GREEN : c.result === "loss" ? RED : ACCENT;
+              const isOpen = expanded.has(t.id);
+              const isOpenTrade = c.result === "open";
+              return (
+                <div key={t.id} className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--panel)]" style={{ boxShadow: `inset 4px 0 0 0 ${border}` }}>
+                  {/* top line */}
+                  <div className="flex items-start justify-between gap-4 px-5 py-4">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-base tabular-nums">
+                      <span className="text-sm text-[var(--muted)]">#{i + 1}</span>
+                      <span className="text-sm text-[var(--muted)]">{isoToDisplay(t.trade_date)}</span>
+                      <span className="text-xl font-bold">{t.symbol}</span>
+                      <span className="font-semibold" style={{ color: t.direction === "long" ? GREEN : RED }}>{t.direction === "long" ? "לונג" : "שורט"}</span>
+                      {c.partial && <span className="rounded-full px-2 py-0.5 text-[10px]" style={{ background: "rgba(245,158,11,0.15)", color: "var(--gold)" }}>חלקי</span>}
+                      <span style={{ color: "var(--border)" }}>|</span>
+                      <span><span className="text-[var(--muted)]">ממוצע כניסה: </span>{c.totalQin > 0 ? `$${c.avgEntry.toFixed(2)}` : "—"}</span>
+                      <span><span className="text-[var(--muted)]">ממוצע יציאה: </span>{c.totalQout > 0 ? `$${c.avgExit.toFixed(2)}` : "—"}</span>
+                      <span><span className="text-[var(--muted)]">סיכון: </span>{money(t.risk_dollars)}</span>
+                    </div>
+                    <div className="flex shrink-0 flex-wrap items-center justify-end gap-x-3 gap-y-1">
+                      <div className="flex items-center gap-2 text-base font-bold tabular-nums">
+                        <span className="text-xs font-normal text-[var(--muted)]">סך הכל</span>
+                        <span style={{ color: isOpenTrade ? undefined : plColor(c.pl) }}>{isOpenTrade ? "—" : money(c.pl)}</span>
+                        <span className="font-normal text-[var(--muted)]">·</span>
+                        <span style={{ color: isOpenTrade ? undefined : plColor(c.pct) }}>{isOpenTrade ? "—" : pct(c.pct)}</span>
+                        <span className="font-normal text-[var(--muted)]">·</span>
+                        <span style={{ color: isOpenTrade ? undefined : plColor(c.rr) }}>{isOpenTrade ? "—" : rstr(c.rr)}</span>
+                      </div>
+                      <Badge result={c.result} partial={c.partial} />
+                      {canEdit && (
+                        <button onClick={() => openEdit(t)} className="rounded px-2 py-1 text-xs" style={{ color: ACCENT, border: "1px solid var(--border)" }}>✏ ערוך</button>
+                      )}
+                      <DeleteButton onConfirm={() => removeStockTrade(t.id)} title="מחק עסקה" />
+                    </div>
+                  </div>
+
+                  {!compact && (
+                    <>
+                      <div className="border-t border-[var(--border)] px-5 py-3">
+                        <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm tabular-nums sm:grid-cols-4">
+                          <div><span className="text-[var(--muted)]">פוזיציה $: </span>{money(c.positionDollar)}</div>
+                          <div><span className="text-[var(--muted)]">עמלות: </span>{money(c.fees)}</div>
+                          <div><span className="text-[var(--muted)]">כמות נכנסת: </span>{c.totalQin.toLocaleString()}</div>
+                          <div><span className="text-[var(--muted)]">כמות יצאת: </span>{c.totalQout.toLocaleString()}</div>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => toggleExpand(t.id)}
+                        className="flex w-full items-center justify-center gap-2 border-t border-[var(--border)] py-3 text-sm font-bold tracking-wide transition-colors hover:brightness-125"
+                        style={{ background: "rgba(56,189,248,0.16)", color: "#7dd3fc" }}
+                      >
+                        {isOpen ? "סגור פירוט ▲" : "לחצו לפירוט מלא ▼"}
+                      </button>
+
+                      {isOpen && (
+                        <div className="border-t border-[var(--border)] bg-[var(--panel-2)] p-3">
+                          <div className="grid gap-4 md:grid-cols-2">
+                            <LegRows title="כניסות (קניות)" legs={t.entries} />
+                            <LegRows title="יציאות (מכירות)" legs={t.exits} />
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ) : (
         <div className="overflow-auto rounded-2xl border border-[var(--border)] bg-[var(--panel)] p-2">
           <table className="w-full border-separate border-spacing-0 text-sm">
             <thead>
@@ -296,6 +430,7 @@ export function StockJournal({ trades }: { trades: StockTrade[] }) {
             </tbody>
           </table>
         </div>
+        )}
       </section>
 
       {open && (
