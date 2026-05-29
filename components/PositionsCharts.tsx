@@ -48,12 +48,12 @@ function TwoBars({ data }: { data: Point[] }) {
         <CartesianGrid stroke={GRID} vertical={false} />
         <XAxis dataKey="label" stroke={AXIS} tick={{ fontSize: 12, fontWeight: 600 }} />
         <YAxis stroke={AXIS} tick={{ fontSize: 11 }} tickFormatter={money} width={70} />
-        <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => money(v)} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
+        <Tooltip contentStyle={tooltipStyle} formatter={(v) => money(Number(v))} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
         <Bar dataKey="value" radius={[6, 6, 0, 0]} barSize={70}>
           {data.map((d, i) => (
             <Cell key={i} fill={d.value >= 0 ? GREEN : RED} />
           ))}
-          <LabelList dataKey="value" position="top" formatter={(v: number) => money(v)} style={{ fill: "#e6ecf5", fontSize: 12, fontWeight: 700 }} />
+          <LabelList dataKey="value" position="top" formatter={(v) => money(Number(v))} style={{ fill: "#e6ecf5", fontSize: 12, fontWeight: 700 }} />
         </Bar>
       </BarChart>
     </ResponsiveContainer>
@@ -92,7 +92,7 @@ export function PositionsCharts({
               <CartesianGrid stroke={GRID} />
               <XAxis dataKey="label" stroke={AXIS} tick={{ fontSize: 11 }} />
               <YAxis stroke={AXIS} tick={{ fontSize: 11 }} tickFormatter={money} width={70} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => money(v)} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(v) => money(Number(v))} />
               <Line type="monotone" dataKey="value" stroke={GREEN} strokeWidth={2} dot={{ r: 3, fill: GREEN }} />
             </LineChart>
           </ResponsiveContainer>
@@ -113,7 +113,7 @@ export function PositionsCharts({
               <CartesianGrid stroke={GRID} />
               <XAxis dataKey="label" stroke={AXIS} tick={{ fontSize: 10 }} interval={0} angle={-30} textAnchor="end" height={60} />
               <YAxis stroke={AXIS} tick={{ fontSize: 11 }} tickFormatter={money} width={70} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => money(v)} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(v) => money(Number(v))} />
               <Bar dataKey="pnl" radius={[4, 4, 0, 0]}>
                 {perTrade.map((d, i) => (
                   <Cell key={i} fill={d.pnl >= 0 ? GREEN : RED} />
@@ -128,7 +128,7 @@ export function PositionsCharts({
               <CartesianGrid stroke={GRID} />
               <XAxis type="number" stroke={AXIS} tick={{ fontSize: 11 }} tickFormatter={money} />
               <YAxis type="category" dataKey="label" stroke={AXIS} tick={{ fontSize: 11 }} width={70} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => money(v)} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(v) => money(Number(v))} />
               <Bar dataKey="pnl" radius={[0, 4, 4, 0]}>
                 {byAsset.map((d, i) => (
                   <Cell key={i} fill={d.pnl >= 0 ? GREEN : RED} />

@@ -33,15 +33,6 @@ function plColor(n: number | null): string | undefined {
   if (n == null) return undefined;
   return n >= 0 ? GREEN : RED;
 }
-function effPnl(p: Position): number | null {
-  return p.pnl_dollars ?? p.unrealized_pnl_dollars ?? null;
-}
-function effPct(p: Position): number | null {
-  return p.pnl_percent ?? p.unrealized_pnl_percent ?? null;
-}
-function effR(p: Position): number | null {
-  return p.r_achieved ?? p.unrealized_r ?? null;
-}
 
 const TH = "sticky top-0 bg-[var(--panel-2)] px-3 py-2.5 text-right text-xs font-semibold text-[var(--muted)] whitespace-nowrap border-b border-[var(--border)]";
 const TD = "px-3 py-2.5 border-b border-[var(--border)] whitespace-nowrap";
