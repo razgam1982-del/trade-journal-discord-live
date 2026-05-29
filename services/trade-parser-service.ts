@@ -23,6 +23,7 @@ const SignalSchema = z.object({
   entry_type: z.enum(['immediate', 'trigger', 'limit']).nullable(),
   entry_price: z.number().nullable(),
   exit_price: z.number().nullable(),
+  current_price: z.number().nullable(),
   risk_percent: z.number().nullable(),
   stop_price: z.number().nullable(),
   tp_price: z.number().nullable(),
@@ -69,6 +70,7 @@ FIELDS (use null when not present — never invent a value):
   - "limit" — pullback entry: "לימיט 4495" / "כניסה: לימיט 4495". Put the limit LEVEL in entry_price. A separate "מחיר נוכחי" is market context — do NOT use it as entry_price.
   - null if no entry instruction (e.g. a stop_update or close message).
 - exit_price: for a reduce/close, the execution price stated in the message ("לסגור 20% במחיר 4442" → 4442; "מימשתי ב-4502" → 4502). null for entries, stop_update, commentary, or when no exit price is written.
+- current_price: the live price explicitly written as "מחיר נוכחי" or "מחיר כעת" in the message — capture it on ANY message type (entry, add, reduce, close, even commentary). It's the up-to-date market price and updates the position's current price. (On an immediate entry it equals entry_price; on a reduce/close it equals exit_price; on a trigger/limit it's separate market context.) null if not written.
 - stop_price / tp_price: "סטופ"/"STOP"→stop_price, "טייק פרופיט"/"טייק"/"TP"→tp_price.
 - risk_percent: the portfolio risk percent as a number ("סיכון 0.2 אחוז" → 0.2). null if not stated.
 - quantity_text: free-text size for reductions ("חצי") or null.
@@ -152,6 +154,7 @@ For EACH actionable event:
   "כמות מלאה"/"מלאה"/"כמות מקורית" → 1; "2/3"/"שני שליש" → 0.667; "חצי"/"חצי כמות" → 0.5; "שליש"/"שליש כמות" → 0.333; "כמות קטנה" → 0.25. If the amount is vague ("עוד חלק", "חלק", "יתרה") → null.
 - quantity_text: the Hebrew size phrase verbatim ("שליש כמות", "חצי", "כמות קטנה", "עוד חלק", "יתרה") or null.
 - close_percent: ALWAYS null in this channel.
+- current_price: ALWAYS null in this channel.
 - parser_confidence: 0..1. Use <0.6 when the fraction or stop is vague so it gets flagged for manual review.
 - parser_notes: one short Hebrew note when something is ambiguous, else null.
 
@@ -191,6 +194,7 @@ function toParsedSignal(p: z.infer<typeof SignalSchema>): ParsedSignal {
     entry_type: p.entry_type,
     entry_price: p.entry_price,
     exit_price: p.exit_price,
+    current_price: p.current_price,
     risk_percent: p.risk_percent,
     stop_price: p.stop_price,
     tp_price: p.tp_price,
