@@ -258,32 +258,29 @@ export function PositionsTable({ positions }: { positions: Position[] }) {
         return (
           // One bordered box per trade so it's clear all the data belongs together.
           <div key={key} className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--panel)]" style={{ boxShadow: `inset 4px 0 0 0 ${border}` }}>
-            {/* Identity + delete. The expand control is the prominent button below. */}
-            <div className="flex items-center justify-between gap-3 px-4 py-3">
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <span className="text-xs tabular-nums text-[var(--muted)]">#{i + 1}</span>
-                <span className="text-xs tabular-nums text-[var(--muted)]">{fmtDate(p.opened_at)}</span>
+            {/* Top line: identity + prices on the right, status + delete on the left. */}
+            <div className="flex items-start justify-between gap-3 px-4 py-3">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm tabular-nums">
+                <span className="text-xs text-[var(--muted)]">#{i + 1}</span>
+                <span className="text-xs text-[var(--muted)]">{fmtDate(p.opened_at)}</span>
                 <span className="text-base font-bold">{p.asset}</span>
                 {p.needs_review && <span className="text-[10px]" style={{ color: "var(--gold)" }} title="דורש בדיקה">⚠</span>}
-                <span className="text-sm font-semibold" style={{ color: p.direction === "long" ? GREEN : p.direction === "short" ? RED : "var(--muted)" }}>{DIR[p.direction]}</span>
-                <Badge result={result} partial={partial} />
+                <span className="font-semibold" style={{ color: p.direction === "long" ? GREEN : p.direction === "short" ? RED : "var(--muted)" }}>{DIR[p.direction]}</span>
+                <span style={{ color: "var(--border)" }}>|</span>
+                <span><span className="text-[var(--muted)]">ממוצע כניסה: </span>{p.avg_entry_price != null ? p.avg_entry_price.toFixed(2) : "—"}</span>
+                <span><span className="text-[var(--muted)]">ממוצע יציאה: </span>{p.avg_exit_price != null ? p.avg_exit_price.toFixed(2) : "—"}</span>
+                {p.status === "open" && (
+                  <span className="flex items-center gap-1">
+                    <span className="text-[var(--muted)]">מחיר נוכחי:</span>
+                    <EditableCurrentPrice asset={p.asset} value={p.current_price} />
+                  </span>
+                )}
+                <span><span className="text-[var(--muted)]">סיכון: </span>{p.total_risk_percent.toFixed(2)}%</span>
               </div>
               <div className="flex shrink-0 items-center gap-2">
+                <Badge result={result} partial={partial} />
                 <DeleteButton onConfirm={() => deletePosition(p.signal_ids)} title="מחק את כל העסקה" label="מחק עסקה" />
               </div>
-            </div>
-
-            {/* Prices */}
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-1 border-t border-[var(--border)] px-4 py-2 text-sm tabular-nums">
-              <span><span className="text-[var(--muted)]">ממוצע כניסה: </span>{p.avg_entry_price != null ? p.avg_entry_price.toFixed(2) : "—"}</span>
-              <span><span className="text-[var(--muted)]">ממוצע יציאה: </span>{p.avg_exit_price != null ? p.avg_exit_price.toFixed(2) : "—"}</span>
-              {p.status === "open" && (
-                <span className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                  <span className="text-[var(--muted)]">מחיר נוכחי:</span>
-                  <EditableCurrentPrice asset={p.asset} value={p.current_price} />
-                </span>
-              )}
-              <span><span className="text-[var(--muted)]">סיכון: </span>{p.total_risk_percent.toFixed(2)}%</span>
             </div>
 
             {/* Aggregate metrics — always visible */}
