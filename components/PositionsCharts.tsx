@@ -39,7 +39,11 @@ function ChartCard({ title, sub, children, className = "" }: { title: string; su
   );
 }
 
-const tooltipStyle = { backgroundColor: "#0f1830", border: "1px solid #1f2a44", borderRadius: 8, color: "#e6ecf5" };
+const tooltipStyle = { backgroundColor: "#0f1830", border: "1px solid #1f2a44", borderRadius: 8, color: "#e6ecf5", padding: "8px 12px" };
+const tipLabel = { color: "#e6ecf5", fontWeight: 700, marginBottom: 4 };
+const tipItem = { color: "#e6ecf5", fontWeight: 600 };
+// Tooltip value formatter — shows "<name>: $X" with a clear Hebrew name.
+const fmt = (name: string) => (v: unknown) => [money(Number(v)), name] as [string, string];
 
 function TwoBars({ data }: { data: Point[] }) {
   return (
@@ -48,7 +52,7 @@ function TwoBars({ data }: { data: Point[] }) {
         <CartesianGrid stroke={GRID} vertical={false} />
         <XAxis dataKey="label" stroke={AXIS} tick={{ fontSize: 12, fontWeight: 600 }} />
         <YAxis stroke={AXIS} tick={{ fontSize: 11 }} tickFormatter={money} width={70} />
-        <Tooltip contentStyle={tooltipStyle} formatter={(v) => money(Number(v))} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
+        <Tooltip contentStyle={tooltipStyle} labelStyle={tipLabel} itemStyle={tipItem} formatter={fmt("סכום")} cursor={{ fill: "rgba(255,255,255,0.06)" }} />
         <Bar dataKey="value" radius={[6, 6, 0, 0]} barSize={70}>
           {data.map((d, i) => (
             <Cell key={i} fill={d.value >= 0 ? GREEN : RED} />
@@ -92,7 +96,7 @@ export function PositionsCharts({
               <CartesianGrid stroke={GRID} />
               <XAxis dataKey="label" stroke={AXIS} tick={{ fontSize: 11 }} />
               <YAxis stroke={AXIS} tick={{ fontSize: 11 }} tickFormatter={money} width={70} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v) => money(Number(v))} />
+              <Tooltip contentStyle={tooltipStyle} labelStyle={tipLabel} itemStyle={tipItem} formatter={fmt("הון מצטבר")} />
               <Line type="monotone" dataKey="value" stroke={GREEN} strokeWidth={2} dot={{ r: 3, fill: GREEN }} />
             </LineChart>
           </ResponsiveContainer>
@@ -113,7 +117,7 @@ export function PositionsCharts({
               <CartesianGrid stroke={GRID} />
               <XAxis dataKey="label" stroke={AXIS} tick={{ fontSize: 10 }} interval={0} angle={-30} textAnchor="end" height={60} />
               <YAxis stroke={AXIS} tick={{ fontSize: 11 }} tickFormatter={money} width={70} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v) => money(Number(v))} />
+              <Tooltip contentStyle={tooltipStyle} labelStyle={tipLabel} itemStyle={tipItem} formatter={fmt("רווח/הפסד")} />
               <Bar dataKey="pnl" radius={[4, 4, 0, 0]}>
                 {perTrade.map((d, i) => (
                   <Cell key={i} fill={d.pnl >= 0 ? GREEN : RED} />
@@ -128,7 +132,7 @@ export function PositionsCharts({
               <CartesianGrid stroke={GRID} />
               <XAxis type="number" stroke={AXIS} tick={{ fontSize: 11 }} tickFormatter={money} />
               <YAxis type="category" dataKey="label" stroke={AXIS} tick={{ fontSize: 11 }} width={70} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v) => money(Number(v))} />
+              <Tooltip contentStyle={tooltipStyle} labelStyle={tipLabel} itemStyle={tipItem} formatter={fmt("רווח/הפסד")} />
               <Bar dataKey="pnl" radius={[0, 4, 4, 0]}>
                 {byAsset.map((d, i) => (
                   <Cell key={i} fill={d.pnl >= 0 ? GREEN : RED} />
