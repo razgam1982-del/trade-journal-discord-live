@@ -41,6 +41,7 @@ type Form = {
   symbol: string;
   direction: "long" | "short";
   risk: string;
+  peak: string;
   entries: LegForm[];
   exits: LegForm[];
 };
@@ -51,6 +52,7 @@ const blankForm = (): Form => ({
   symbol: "",
   direction: "long",
   risk: "",
+  peak: "",
   entries: emptyLegs(),
   exits: emptyLegs(),
 });
@@ -146,9 +148,19 @@ export function StockJournal({ trades }: { trades: StockTrade[] }) {
   const [form, setForm] = useState<Form>(blankForm());
 
   const rows = useMemo(
-    () => trades.map((t) => ({ t, c: calcStockTrade(t) })),
+    () =>
+      trades.map((t) => {
+        const c = calcStockTrade(t);
+        // Money left on the floor: extra profit missed by exiting below the peak.
+        const lof =
+          t.peak_price != null && c.totalQout > 0 && t.peak_price > c.avgExit
+            ? (t.peak_price - c.avgExit) * c.totalQout
+            : 0;
+        return { t, c, lof };
+      }),
     [trades],
   );
+  const totalLeftOnFloor = rows.reduce((s, r) => s + r.lof, 0);
 
   // ── KPIs (closed trades only) ──
   const closed = rows.filter((r) => r.c.result !== "open");
@@ -214,6 +226,7 @@ export function StockJournal({ trades }: { trades: StockTrade[] }) {
       symbol: t.symbol,
       direction: t.direction,
       risk: String(t.risk_dollars),
+      peak: t.peak_price != null ? String(t.peak_price) : "",
       entries: legsToForm(t.entries),
       exits: legsToForm(t.exits),
     });
@@ -239,6 +252,7 @@ export function StockJournal({ trades }: { trades: StockTrade[] }) {
       entries: formToLegs(form.entries),
       exits: formToLegs(form.exits),
       seq: editingSeq ?? Number.MAX_SAFE_INTEGER,
+      peak_price: form.peak.trim() !== "" && !isNaN(parseFloat(form.peak)) ? parseFloat(form.peak) : null,
     };
     startTransition(async () => {
       await saveStockTrade(editingId, input);
@@ -284,6 +298,7 @@ export function StockJournal({ trades }: { trades: StockTrade[] }) {
         <Kpi label="ממוצע עסקה מפסידה" value={losses.length ? money(avgLoss) : "—"} sub={`סה״כ הפסדים: ${money(sumLosses)}`} color={losses.length ? RED : undefined} />
         <Kpi label="העסקה הטובה ביותר" value={best ? money(best.c.pl) : "—"} sub={best ? `${best.t.symbol} · ${rstr(best.c.rr)}` : undefined} color={best ? GREEN : undefined} />
         <Kpi label="העסקה הגרועה ביותר" value={worst ? money(worst.c.pl) : "—"} sub={worst ? `${worst.t.symbol} · ${rstr(worst.c.rr)}` : undefined} color={worst ? RED : undefined} />
+        <Kpi label="כסף שהושאר על הרצפה" value={totalLeftOnFloor > 0 ? money(totalLeftOnFloor) : "—"} sub="פער מהשיא (בעסקאות שמילאת מחיר שיא)" color="var(--gold)" />
       </section>
 
       <section className="mb-6">
@@ -302,7 +317,7 @@ export function StockJournal({ trades }: { trades: StockTrade[] }) {
         </div>
 
         <div className="flex flex-col gap-3">
-            {rows.map(({ t, c }, i) => {
+            {rows.map(({ t, c, lof }, i) => {
               const border = c.result === "win" ? GREEN : c.result === "loss" ? RED : ACCENT;
               const isOpen = expanded.has(t.id);
               const isOpenTrade = c.result === "open";
@@ -347,6 +362,13 @@ export function StockJournal({ trades }: { trades: StockTrade[] }) {
                           <div><span className="text-[var(--muted)]">כמות נכנסת: </span>{c.totalQin.toLocaleString()}</div>
                           <div><span className="text-[var(--muted)]">כמות יצאת: </span>{c.totalQout.toLocaleString()}</div>
                         </div>
+                        {t.peak_price != null && (
+                          <div className="mt-2 text-sm tabular-nums">
+                            <span className="text-[var(--muted)]">הושאר על הרצפה: </span>
+                            <span className="font-bold" style={{ color: "var(--gold)" }}>{money(lof)}</span>
+                            <span className="text-[var(--muted)]"> (שיא ${t.peak_price} · יצאת בממוצע ${c.avgExit.toFixed(2)})</span>
+                          </div>
+                        )}
                       </div>
 
                       <button
@@ -396,6 +418,9 @@ export function StockJournal({ trades }: { trades: StockTrade[] }) {
               </label>
               <label className="flex flex-col gap-1 text-xs text-[var(--muted)]">סיכון $
                 <input type="number" step="0.01" value={form.risk} onChange={(e) => setForm({ ...form, risk: e.target.value })} placeholder="400" className={inputCls} style={inputStyle} />
+              </label>
+              <label className="flex flex-col gap-1 text-xs text-[var(--muted)]">מחיר שיא (אופציונלי)
+                <input type="number" step="any" value={form.peak} onChange={(e) => setForm({ ...form, peak: e.target.value })} placeholder="לכמה הגיעה אחרי שיצאת" className={inputCls} style={inputStyle} />
               </label>
             </div>
 

@@ -44,6 +44,7 @@ function normalize(input: StockTradeInput) {
     entries: input.entries,
     exits: input.exits,
     seq: input.seq,
+    peak_price: input.peak_price ?? null,
   };
 }
 

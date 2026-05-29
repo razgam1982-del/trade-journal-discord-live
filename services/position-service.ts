@@ -60,6 +60,10 @@ function newPosition(
     potential_loss_percent: null,
     potential_loss_dollars: null,
     potential_rr: null,
+    peak_price: null,
+    left_on_floor_dollars: null,
+    left_on_floor_percent: null,
+    left_on_floor_r: null,
     needs_review: false,
   };
 }
@@ -85,6 +89,7 @@ function legFromSignal(
     remaining: 1, // recomputed in finalize for entry legs
     realized_dollars: null, // accumulated in finalize (closed portions)
     open_dollars: null, // accumulated in mark (open portion)
+    peak_price: s.peak_price, // manual position peak (set on the anchor entry leg)
     closes: [], // realization steps recorded in finalize
     excluded: s.excluded,
     pending: false, // computed in finalize
@@ -224,6 +229,28 @@ function finalize(pos: Position, portfolioSize: number): void {
     pos.status = 'closed';
     const lastExit = exitLegs.reduce((d, l) => (l.date > d ? l.date : d), pos.closed_at ?? '');
     if (lastExit) pos.closed_at = lastExit;
+  }
+
+  // Money left on the floor: for the CLOSED portion of each leg, the extra it
+  // would have realized if it exited at the manual peak instead of where it did.
+  const peak = entries.map((l) => l.peak_price).find((p) => p != null) ?? null;
+  pos.peak_price = peak;
+  if (peak != null && portfolioSize > 0) {
+    let lofPct = 0;
+    for (const leg of entries) {
+      const closedFrac = 1 - (leg.remaining ?? 1);
+      if (closedFrac <= 1e-9) continue;
+      const atPeak = legR(leg, peak); // % of portfolio for the whole leg at peak
+      if (atPeak == null) continue;
+      const realizedPct = ((leg.realized_dollars ?? 0) / portfolioSize) * 100;
+      const extra = closedFrac * atPeak - realizedPct;
+      if (extra > 0) lofPct += extra;
+    }
+    if (lofPct > 1e-9) {
+      pos.left_on_floor_percent = lofPct;
+      pos.left_on_floor_dollars = (lofPct / 100) * portfolioSize;
+      pos.left_on_floor_r = pos.total_risk_percent > 0 ? lofPct / pos.total_risk_percent : null;
+    }
   }
 }
 

@@ -6,8 +6,10 @@ import { EditablePrice } from "./EditablePrice";
 import { ExcludeToggle } from "./ExcludeToggle";
 import { EditSignalButton } from "./EditSignalButton";
 import { EditableCurrentPrice } from "./EditableCurrentPrice";
+import { EditablePeak } from "./EditablePeak";
 import { FilledToggle } from "./FilledToggle";
 import { DeleteButton } from "./DeleteButton";
+import { useCanEdit } from "@/components/EditMode";
 import { deleteSignal, deletePosition } from "@/app/positions/actions";
 
 const GREEN = "#22c55e";
@@ -116,6 +118,17 @@ function Summary({ p }: { p: Position }) {
               <span className="text-[var(--muted)]">סיכוי/סיכון: </span>
               <span className="font-bold">{`1:${p.potential_rr.toFixed(2)}`}</span>
             </div>
+          </div>
+        </div>
+      )}
+
+      {p.left_on_floor_dollars != null && (
+        <div>
+          <div className="font-semibold text-[var(--muted)]">כסף שהושאר על הרצפה <span className="text-xs font-normal">(עד השיא, על החלק שנסגר)</span></div>
+          <div className="ms-1 mt-0.5 flex flex-col gap-0.5">
+            <div><span className="text-[var(--muted)]">סכום $: </span><span className="font-bold" style={{ color: "var(--gold)" }}>{money(p.left_on_floor_dollars)}</span></div>
+            <div><span className="text-[var(--muted)]">תשואה %: </span><span style={{ color: "var(--gold)" }}>{p.left_on_floor_percent != null ? pct(p.left_on_floor_percent) : "—"}</span></div>
+            <div><span className="text-[var(--muted)]">יחס סיכון (R): </span><span style={{ color: "var(--gold)" }}>{p.left_on_floor_r != null ? `${p.left_on_floor_r.toFixed(2)}R` : "—"}</span></div>
           </div>
         </div>
       )}
@@ -230,6 +243,7 @@ function LegsTable({ p }: { p: Position }) {
 }
 
 export function PositionsTable({ positions }: { positions: Position[] }) {
+  const canEdit = useCanEdit();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [compact, setCompact] = useState(false);
   const toggle = (k: string) =>
@@ -267,6 +281,7 @@ export function PositionsTable({ positions }: { positions: Position[] }) {
         const total$ = p.pnl_dollars != null || p.unrealized_pnl_dollars != null ? (p.pnl_dollars ?? 0) + (p.unrealized_pnl_dollars ?? 0) : null;
         const totalPct = p.pnl_percent != null || p.unrealized_pnl_percent != null ? (p.pnl_percent ?? 0) + (p.unrealized_pnl_percent ?? 0) : null;
         const totalR = p.r_achieved != null || p.unrealized_r != null ? (p.r_achieved ?? 0) + (p.unrealized_r ?? 0) : null;
+        const anchorId = p.legs.find((l) => l.kind === "entry")?.signal_id;
         return (
           // One bordered box per trade so it's clear all the data belongs together.
           <div key={key} className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--panel)]" style={{ boxShadow: `inset 4px 0 0 0 ${border}` }}>
@@ -288,6 +303,12 @@ export function PositionsTable({ positions }: { positions: Position[] }) {
                   </span>
                 )}
                 <span><span className="text-[var(--muted)]">סיכון: </span>{p.total_risk_percent.toFixed(2)}%</span>
+                {anchorId && (canEdit || p.peak_price != null) && (
+                  <span className="flex items-center gap-1">
+                    <span className="text-[var(--muted)]">מחיר שיא:</span>
+                    <EditablePeak signalId={anchorId} value={p.peak_price} />
+                  </span>
+                )}
               </div>
               <div className="flex shrink-0 flex-wrap items-center justify-end gap-x-3 gap-y-1">
                 <div className="flex items-center gap-2 text-base font-bold tabular-nums">

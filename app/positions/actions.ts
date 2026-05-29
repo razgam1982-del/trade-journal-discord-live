@@ -9,6 +9,7 @@ import {
   updateSignalFields,
   softDeleteSignals,
   restoreSignals,
+  setSignalPeak,
 } from '@/services/trade-signal-service';
 import { setMarketPrice } from '@/services/market-price-service';
 import { setPortfolioSize } from '@/services/settings-service';
@@ -90,5 +91,13 @@ export async function deletePosition(signalIds: string[]): Promise<void> {
 export async function restoreSignal(id: string): Promise<void> {
   await assertEditor();
   await restoreSignals([id]);
+  revalidatePath('/positions');
+}
+
+// Sets the position's manual peak price (on its anchor entry leg) for the
+// "money left on the floor" metric.
+export async function savePositionPeak(signalId: string, value: number | null): Promise<void> {
+  await assertEditor();
+  await setSignalPeak(signalId, value);
   revalidatePath('/positions');
 }

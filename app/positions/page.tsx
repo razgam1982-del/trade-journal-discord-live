@@ -144,6 +144,7 @@ export default async function PositionsPage({
   const openRisk = openPositions.reduce((s, p) => s + p.total_risk_percent, 0);
   const openPotential = openPositions.reduce((s, p) => s + (p.potential_profit_percent ?? 0), 0);
   const openPotentialCount = openPositions.filter((p) => p.potential_profit_percent != null).length;
+  const totalLeftOnFloor = positions.reduce((s, p) => s + (p.left_on_floor_dollars ?? 0), 0);
   const openUnrealized = openPositions.reduce((s, p) => s + (p.unrealized_pnl_dollars ?? 0), 0);
   const hasUnrealized = openPositions.some((p) => p.unrealized_pnl_dollars != null);
   const r = (p: { r_achieved: number | null } | null) => (p?.r_achieved != null ? ` · ${p.r_achieved.toFixed(2)}R` : "");
@@ -245,6 +246,10 @@ export default async function PositionsPage({
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Kpi label="העסקה הטובה ביותר" value={best ? money(best.pnl_dollars) : "—"} sub={best ? `${best.asset}${r(best)}` : "—"} color={best ? "var(--green)" : undefined} />
               <Kpi label="העסקה הגרועה ביותר" value={worst ? money(worst.pnl_dollars) : "—"} sub={worst ? `${worst.asset}${r(worst)}` : "—"} color={worst ? "var(--red)" : undefined} />
+            </div>
+            {/* כסף שהושאר על הרצפה */}
+            <div className="grid grid-cols-1 gap-3">
+              <Kpi label="כסף שהושאר על הרצפה" value={totalLeftOnFloor > 0 ? money(totalLeftOnFloor) : "—"} sub="פער מהשיא (בעסקאות שמילאת מחיר שיא)" color="var(--gold)" />
             </div>
           </div>
         </div>

@@ -208,6 +208,18 @@ export async function listDeletedSignals(): Promise<TradeSignalWithMessage[]> {
   return rows.sort((a, b) => (b.deleted_at ?? '').localeCompare(a.deleted_at ?? ''));
 }
 
+// Sets the manual peak price on a signal (the position's anchor entry leg) —
+// used for the "money left on the floor" metric.
+export async function setSignalPeak(signalId: string, value: number | null): Promise<void> {
+  const { error } = await supabaseAdmin
+    .from('trade_signals')
+    .update({ peak_price: value })
+    .eq('id', signalId);
+  if (error) {
+    throw new Error(`Failed to update peak price: ${error.message}`);
+  }
+}
+
 // Trade signals (is_trade = true) joined with their source message, newest first.
 export async function listTradeSignals(limit = 200): Promise<TradeSignalWithMessage[]> {
   const { data, error } = await supabaseAdmin

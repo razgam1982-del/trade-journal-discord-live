@@ -64,6 +64,7 @@ export interface TradeSignal extends ParsedSignal {
   manually_edited: boolean;
   excluded: boolean; // excluded from calculations (still shown)
   filled: boolean | null; // manual override for limit/trigger fill (null = auto)
+  peak_price: number | null; // manual: peak the asset reached after exit (left-on-floor)
   deleted_at: string | null; // soft delete — hidden from the journal, recoverable
   created_at: string;
 }
@@ -100,6 +101,9 @@ export interface StockTrade {
   entries: StockLeg[];
   exits: StockLeg[];
   seq: number; // display order
+  // Manually-entered peak the stock reached after exit — for "money left on the
+  // floor" (extra profit missed by exiting early). Null = not tracked.
+  peak_price: number | null;
   deleted_at: string | null; // soft delete — hidden from the journal, recoverable
   created_at: string;
 }
@@ -153,6 +157,7 @@ export interface PositionLeg {
   remaining: number; // entry legs: 0..1 share still open (0 = fully closed → struck through)
   realized_dollars: number | null; // entry legs: P/L $ realized on closed portions (at exit prices)
   open_dollars: number | null; // entry legs: P/L $ on the still-open portion (marked to current price)
+  peak_price: number | null; // manual position-level peak (stored on the anchor entry leg)
   closes: LegCloseEvent[]; // entry legs: the realization steps that consumed this leg
   excluded: boolean;
   pending: boolean; // limit/trigger entry not yet filled — shown but 0 performance
@@ -195,5 +200,11 @@ export interface Position {
   potential_loss_percent: number | null; // negative
   potential_loss_dollars: number | null; // negative
   potential_rr: number | null; // reward / risk (סיכוי/סיכון)
+  // "Money left on the floor": extra profit if the closed portion had exited at
+  // the user-entered peak instead of the actual exit prices. Null when no peak.
+  peak_price: number | null;
+  left_on_floor_dollars: number | null;
+  left_on_floor_percent: number | null;
+  left_on_floor_r: number | null;
   needs_review: boolean;
 }
