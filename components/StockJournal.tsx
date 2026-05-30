@@ -331,7 +331,7 @@ export function StockJournal({ trades }: { trades: StockTrade[] }) {
         </div>
 
         <div className="flex flex-col gap-3">
-            {rows.map(({ t, c, lof }, i) => {
+            {[...rows].sort((a, b) => (b.t.trade_date + String(b.t.seq).padStart(6,'0')).localeCompare(a.t.trade_date + String(a.t.seq).padStart(6,'0'))).map(({ t, c, lof }, i) => {
               const border = c.result === "win" ? GREEN : c.result === "loss" ? RED : ACCENT;
               const isOpen = expanded.has(t.id);
               const isOpenTrade = c.result === "open";
