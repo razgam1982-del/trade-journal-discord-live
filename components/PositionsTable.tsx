@@ -245,7 +245,7 @@ function LegsTable({ p }: { p: Position }) {
 const HEB_MONTHS = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
 
 // Group positions by year-month of opened_at and compute per-month aggregates.
-// Returns ordered groups (chronological by month).
+// Newest month first, and within each month newest position first.
 function groupByMonth(positions: Position[]) {
   const groups = new Map<string, { key: string; name: string; positions: Position[]; realized: number; open: number; closedCount: number; openCount: number; wins: number; losses: number }>();
   for (const p of positions) {
@@ -269,7 +269,12 @@ function groupByMonth(positions: Position[]) {
       g.openCount++;
     }
   }
-  return [...groups.values()].sort((a, b) => a.key.localeCompare(b.key));
+  // Sort positions within each month: newest first (by opened_at desc).
+  for (const g of groups.values()) {
+    g.positions.sort((a, b) => b.opened_at.localeCompare(a.opened_at));
+  }
+  // Sort months: newest first (key is YYYY-MM, desc).
+  return [...groups.values()].sort((a, b) => b.key.localeCompare(a.key));
 }
 
 export function PositionsTable({ positions }: { positions: Position[] }) {
