@@ -196,6 +196,25 @@ export default async function PositionsPage({
   const spxSeries = await fetchBenchmarkSeries("^GSPC", firstDate, lastDate);
   for (const e of equity) e.spxPct = spxPctAt(spxSeries, e.date);
   const spxEndPct = equity[equity.length - 1]?.spxPct ?? null;
+  // Compute SPX daily Sharpe/Sortino for comparison context.
+  let spxSharpe: number | null = null;
+  let spxSortino: number | null = null;
+  if (spxSeries.length >= 3) {
+    const spxDailyReturns: number[] = [];
+    for (let i = 1; i < spxSeries.length; i++) {
+      const prev = spxSeries[i - 1].pct;
+      const curr = spxSeries[i].pct;
+      // pct here is cumulative; daily return = (1+curr/100)/(1+prev/100) - 1
+      spxDailyReturns.push((((1 + curr / 100) / (1 + prev / 100)) - 1) * 100);
+    }
+    const m = spxDailyReturns.reduce((s, v) => s + v, 0) / spxDailyReturns.length;
+    const v = spxDailyReturns.reduce((s, x) => s + (x - m) ** 2, 0) / (spxDailyReturns.length - 1);
+    const std = Math.sqrt(v);
+    spxSharpe = std > 0 ? m / std : null;
+    const dn = spxDailyReturns.filter((x) => x < 0).map((x) => (x - m) ** 2);
+    const dStd = dn.length ? Math.sqrt(dn.reduce((s, x) => s + x, 0) / dn.length) : 0;
+    spxSortino = dStd > 0 ? m / dStd : null;
+  }
 
   // Sharpe / Sortino on per-trade % returns (annualization is left out — these
   // are intra-period stats for a small sample, more honest as raw ratios).
@@ -390,8 +409,8 @@ export default async function PositionsPage({
             <div className="grid grid-cols-1 gap-3">
               <Kpi label="כסף שהושאר על הרצפה" value={totalLeftOnFloor > 0 ? money(totalLeftOnFloor) : "—"} sub="פער מהשיא (בעסקאות שמילאת מחיר שיא)" color="var(--gold)" />
             </div>
-            {/* Risk-adjusted metrics: Sharpe + Sortino + השוואה ל-SPX */}
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {/* Risk-adjusted metrics: Sharpe + Sortino */}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Kpi
                 label="מדד שארפ (Sharpe)"
                 value={sharpe != null ? sharpe.toFixed(2) : "—"}
@@ -404,13 +423,65 @@ export default async function PositionsPage({
                 sub="תשואה ÷ תנודתיות שלילית (רק ירידות) · מודד יציבות בירידות"
                 color={sortino != null ? (sortino >= 0 ? "var(--green)" : "var(--red)") : undefined}
               />
-              <Kpi
-                label="ביצועי SPX (S&P 500)"
-                value={spxEndPct != null ? pct(spxEndPct) : "—"}
-                sub={spxEndPct != null && totalPnlPct + (openUnrealizedPct ?? 0) != null ? `הפרש מהתיק: ${pct(totalPnlPct + (openUnrealizedPct ?? 0) - spxEndPct)}` : "השוואה לתקופה"}
-                color={spxEndPct != null ? (spxEndPct >= 0 ? "var(--green)" : "var(--red)") : undefined}
-              />
             </div>
+            {/* פרשנות: מה אומרים שארפ/סורטינו של התיק לעומת SPX */}
+            {sharpe != null && (
+              <div className="rounded-xl border p-4 text-sm leading-relaxed" style={{ borderColor: "rgba(56,189,248,0.35)", background: "rgba(56,189,248,0.05)" }}>
+                <div className="mb-2 text-xs font-bold text-[var(--muted)]">פרשנות מול S&P 500</div>
+                <div className="text-[var(--text)]">
+                  {(() => {
+                    const portPct = totalPnlPct + (openUnrealizedPct ?? 0);
+                    const sp = spxEndPct ?? 0;
+                    const sharpVsSpx = spxSharpe != null && sharpe != null ? sharpe - spxSharpe : null;
+                    const sortVsSpx = spxSortino != null && sortino != null ? sortino - spxSortino : null;
+                    const portBetter = portPct > sp;
+                    const verdict =
+                      sharpVsSpx == null
+                        ? "—"
+                        : sharpVsSpx > 0.5
+                        ? "טוב משמעותית מהמדד"
+                        : sharpVsSpx > 0.1
+                        ? "טוב מהמדד"
+                        : sharpVsSpx > -0.1
+                        ? "דומה למדד"
+                        : "נמוך יותר מהמדד";
+                    const sortinoGap = sortino != null && sharpe != null ? sortino - sharpe : null;
+                    const stable =
+                      sortinoGap == null
+                        ? null
+                        : sortinoGap > 0.5
+                        ? "מאוד יציב בירידות (הסורטינו גבוה משמעותית מהשארפ — רוב התנודתיות במעלה, לא במורד)"
+                        : sortinoGap > 0.1
+                        ? "יציב יחסית בירידות (סורטינו גבוה מהשארפ)"
+                        : sortinoGap > -0.1
+                        ? "תנודתיות מאוזנת בין מעלה למטה"
+                        : "תנודתיות גדולה בירידות";
+                    return (
+                      <>
+                        <p>
+                          התיק עשה <strong style={{ color: portBetter ? "var(--green)" : "var(--red)" }}>{pct(portPct)}</strong> · ה-SPX עשה <strong style={{ color: sp >= 0 ? "var(--green)" : "var(--red)" }}>{pct(sp)}</strong>{" "}
+                          ({portBetter ? "התיק" : "SPX"} מקדים ב-{pct(Math.abs(portPct - sp))}).
+                        </p>
+                        <p className="mt-1">
+                          מבחינת <strong>תשואה מתואמת סיכון</strong> (שארפ): התיק {sharpe.toFixed(2)} · SPX {spxSharpe != null ? spxSharpe.toFixed(2) : "—"}
+                          {sharpVsSpx != null && (
+                            <> — <strong style={{ color: sharpVsSpx > 0 ? "var(--green)" : "var(--red)" }}>{verdict}</strong></>
+                          )}.
+                        </p>
+                        {stable && (
+                          <p className="mt-1">
+                            מבחינת <strong>יציבות בירידות</strong>: <strong style={{ color: sortinoGap! > 0.1 ? "var(--green)" : sortinoGap! < -0.1 ? "var(--red)" : "var(--muted)" }}>{stable}</strong>. הסורטינו של SPX באותה תקופה: {spxSortino != null ? spxSortino.toFixed(2) : "—"}.
+                          </p>
+                        )}
+                        <p className="mt-2 text-xs text-[var(--muted)]">
+                          השורה התחתונה: {portBetter ? "התיק עקף את המדד גם בתשואה" : "המדד עשה תשואה גבוהה יותר"}, אבל המדד הקריטי הוא <strong>סורטינו</strong> — והוא {sortinoGap != null && sortinoGap > 0.1 ? "מראה שהתיק חוסך לסוחר את הירידות הגדולות שמלוות תיק מדד פסיבי" : "דומה בערך לתיק מדד פסיבי"}.
+                        </p>
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
