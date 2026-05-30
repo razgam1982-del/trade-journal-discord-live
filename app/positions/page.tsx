@@ -180,6 +180,16 @@ export default async function PositionsPage({
   ];
   const allDates = positions.map((p) => p.opened_at).sort();
   const period = allDates.length ? `${shortDate(allDates[0])} – ${shortDate(allDates[allDates.length - 1])}` : "—";
+  // Human month range, e.g. "מרץ – מאי 2026", to caption KPI totals.
+  const HEB_MONTHS = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+  let periodMonths = "—";
+  if (allDates.length) {
+    const a = new Date(allDates[0]);
+    const b = new Date(allDates[allDates.length - 1]);
+    const am = `${HEB_MONTHS[a.getMonth()]} ${a.getFullYear()}`;
+    const bm = `${HEB_MONTHS[b.getMonth()]} ${b.getFullYear()}`;
+    periodMonths = am === bm ? am : `${am} – ${bm}`;
+  }
 
   return (
     <EditModeProvider canEdit={canEdit}>
@@ -241,14 +251,14 @@ export default async function PositionsPage({
                 <Kpi
                   label="סך הכל (ממומש + פתוח)"
                   value={pct(totalPnlPct + openUnrealizedPct)}
-                  sub={`${money(totalPnl + openUnrealized)} · ממומש ${money(totalPnl)} + פתוח ${money(openUnrealized)}`}
+                  sub={`${money(totalPnl + openUnrealized)} · ממומש ${money(totalPnl)} + פתוח ${money(openUnrealized)} · תקופה ${periodMonths}`}
                   color={pnlColor(totalPnl + openUnrealized)}
                 />
               </div>
             )}
             {/* זוג: רווח/הפסד ממומש ↔ פתוח */}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Kpi label="סך רווח/הפסד ממומש" value={realized.length ? pct(totalPnlPct) : "—"} sub={realized.length ? money(totalPnl) : "מלא מחירי יציאה"} color={pnlColor(realized.length ? totalPnl : null)} />
+              <Kpi label="סך רווח/הפסד ממומש" value={realized.length ? pct(totalPnlPct) : "—"} sub={realized.length ? `${money(totalPnl)} · תקופה ${periodMonths}` : "מלא מחירי יציאה"} color={pnlColor(realized.length ? totalPnl : null)} />
               <Kpi label="רווח פתוח על השולחן" value={hasUnrealized ? pct(openUnrealizedPct) : "—"} sub={hasUnrealized ? `${money(openUnrealized)} · לפי מחיר נוכחי` : "רווח/הפסד פתוח · לפי מחיר נוכחי"} color={pnlColor(hasUnrealized ? openUnrealized : null)} />
             </div>
             {/* זוג: ממוצע עסקה מרוויחה ↔ מפסידה */}
