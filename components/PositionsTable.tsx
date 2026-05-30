@@ -247,20 +247,22 @@ const HEB_MONTHS = ['ינואר','פברואר','מרץ','אפריל','מאי','
 // Group positions by year-month of opened_at and compute per-month aggregates.
 // Newest month first, and within each month newest position first.
 function groupByMonth(positions: Position[]) {
-  const groups = new Map<string, { key: string; name: string; positions: Position[]; realized: number; open: number; closedCount: number; openCount: number; wins: number; losses: number }>();
+  const groups = new Map<string, { key: string; name: string; positions: Position[]; realized: number; open: number; realizedPct: number; openPct: number; closedCount: number; openCount: number; wins: number; losses: number }>();
   for (const p of positions) {
     const d = new Date(p.opened_at);
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     if (!groups.has(key)) {
       groups.set(key, {
         key, name: `${HEB_MONTHS[d.getMonth()]} ${d.getFullYear()}`,
-        positions: [], realized: 0, open: 0, closedCount: 0, openCount: 0, wins: 0, losses: 0,
+        positions: [], realized: 0, open: 0, realizedPct: 0, openPct: 0, closedCount: 0, openCount: 0, wins: 0, losses: 0,
       });
     }
     const g = groups.get(key)!;
     g.positions.push(p);
     g.realized += p.pnl_dollars ?? 0;
     g.open += p.unrealized_pnl_dollars ?? 0;
+    g.realizedPct += p.pnl_percent ?? 0;
+    g.openPct += p.unrealized_pnl_percent ?? 0;
     if (p.pnl_dollars != null) {
       g.closedCount++;
       if (p.pnl_dollars > 0) g.wins++;
@@ -275,6 +277,26 @@ function groupByMonth(positions: Position[]) {
   }
   // Sort months: newest first (key is YYYY-MM, desc).
   return [...groups.values()].sort((a, b) => b.key.localeCompare(a.key));
+}
+
+function MonthNav({ groups }: { groups: ReturnType<typeof groupByMonth> }) {
+  if (groups.length < 2) return null;
+  return (
+    <div className="mb-3 flex flex-wrap gap-2">
+      {groups.map((g) => {
+        const totalPct = g.realizedPct + g.openPct;
+        const total$ = g.realized + g.open;
+        const c = totalPct > 0 ? GREEN : totalPct < 0 ? RED : "var(--muted)";
+        return (
+          <a key={`nav-${g.key}`} href={`#month-${g.key}`} className="flex flex-col rounded-xl border border-[var(--border)] bg-[var(--panel)] px-4 py-2 transition hover:border-[var(--accent)] hover:-translate-y-px" style={{ textDecoration: 'none', minWidth: 150 }}>
+            <span className="text-xs text-[var(--muted)]">{g.name}</span>
+            <span className="text-xl font-bold tabular-nums" style={{ color: c }}>{pct(totalPct)}</span>
+            <span className="text-xs tabular-nums" style={{ color: c }}>{money(total$)} · {g.positions.length} עסקאות</span>
+          </a>
+        );
+      })}
+    </div>
+  );
 }
 
 export function PositionsTable({ positions }: { positions: Position[] }) {
@@ -310,15 +332,20 @@ export function PositionsTable({ positions }: { positions: Position[] }) {
       {(() => {
         const groups = groupByMonth(positions);
         let globalIdx = 0;
-        return groups.map((g) => (
-          <Fragment key={`m-${g.key}`}>
-            <MonthHeader group={g} />
-            {g.positions.map((p) => {
-              const i = globalIdx++;
-              return renderPosition(p, i);
-            })}
-          </Fragment>
-        ));
+        return (
+          <>
+            <MonthNav groups={groups} />
+            {groups.map((g) => (
+              <Fragment key={`m-${g.key}`}>
+                <MonthHeader group={g} />
+                {g.positions.map((p) => {
+                  const i = globalIdx++;
+                  return renderPosition(p, i);
+                })}
+              </Fragment>
+            ))}
+          </>
+        );
       })()}
     </div>
   );
@@ -411,7 +438,7 @@ function MonthHeader({ group }: { group: ReturnType<typeof groupByMonth>[number]
   const realizedColor = group.realized > 0 ? GREEN : group.realized < 0 ? RED : undefined;
   const openColor = group.open > 0 ? GREEN : group.open < 0 ? RED : undefined;
   return (
-    <div className="mt-3 first:mt-0 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-[var(--border)] bg-[var(--panel-2)] px-5 py-3" style={{ borderRightWidth: '4px', borderRightColor: ACCENT }}>
+    <div id={`month-${group.key}`} className="mt-3 first:mt-0 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-[var(--border)] bg-[var(--panel-2)] px-5 py-3 scroll-mt-4" style={{ borderRightWidth: '4px', borderRightColor: ACCENT }}>
       <span className="text-lg font-bold">{group.name}</span>
       <span className="text-sm text-[var(--muted)]">·</span>
       <span className="text-base font-bold tabular-nums" style={{ color: totalColor }}>{money(total)}</span>
