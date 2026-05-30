@@ -183,13 +183,28 @@ export default async function PositionsPage({
   // Human month range, e.g. "מרץ – מאי 2026", to caption KPI totals.
   const HEB_MONTHS = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
   let periodMonths = "—";
+  let currentMonthName = "—";
+  let currentMonthKey = "";
   if (allDates.length) {
     const a = new Date(allDates[0]);
     const b = new Date(allDates[allDates.length - 1]);
     const am = `${HEB_MONTHS[a.getMonth()]} ${a.getFullYear()}`;
     const bm = `${HEB_MONTHS[b.getMonth()]} ${b.getFullYear()}`;
     periodMonths = am === bm ? am : `${am} – ${bm}`;
+    currentMonthName = bm;
+    currentMonthKey = `${b.getFullYear()}-${String(b.getMonth() + 1).padStart(2, '0')}`;
   }
+  // Current-month subset (latest month present in the data).
+  const cmPositions = positions.filter((p) => {
+    const d = new Date(p.opened_at);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` === currentMonthKey;
+  });
+  const cmRealizedPositions = cmPositions.filter((p) => p.pnl_dollars != null);
+  const cmTotalPnl = cmRealizedPositions.reduce((s, p) => s + (p.pnl_dollars ?? 0), 0);
+  const cmTotalPnlPct = cmRealizedPositions.reduce((s, p) => s + (p.pnl_percent ?? 0), 0);
+  const cmOpenUnrealized = cmPositions.reduce((s, p) => s + (p.unrealized_pnl_dollars ?? 0), 0);
+  const cmOpenUnrealizedPct = cmPositions.reduce((s, p) => s + (p.unrealized_pnl_percent ?? 0), 0);
+  const cmHasUnrealized = cmPositions.some((p) => p.unrealized_pnl_dollars != null);
 
   return (
     <EditModeProvider canEdit={canEdit}>
@@ -243,7 +258,7 @@ export default async function PositionsPage({
       <section className="mb-6 flex flex-col gap-4 lg:flex-row">
         {/* ימין — ביצועים (כל השאר) */}
         <div className="rounded-2xl border-2 border-[var(--border)] p-4 lg:flex-[2]">
-          <h3 className="mb-3 text-sm font-bold text-[var(--muted)]">ביצועים</h3>
+          <h3 className="mb-3 text-sm font-bold text-[var(--muted)]">ביצועים — סך התיק <span className="font-normal" style={{ color: "var(--muted)" }}>· תקופה {periodMonths}</span></h3>
           <div className="flex flex-col gap-4">
             {/* סך הכל (ממומש + פתוח) — מופיע רק כשיש פתוח, אחרת ה"ממומש" כבר מסכם הכל */}
             {hasUnrealized && (
@@ -287,6 +302,31 @@ export default async function PositionsPage({
           </div>
         </div>
       </section>
+
+      {/* ביצועים — חודש נוכחי בלבד */}
+      {cmPositions.length > 0 && (
+        <section className="mb-6">
+          <div className="rounded-2xl border-2 p-4" style={{ borderColor: "rgba(34,197,94,0.4)" }}>
+            <h3 className="mb-3 text-sm font-bold text-[var(--muted)]">ביצועים — חודש נוכחי <span className="font-normal" style={{ color: "var(--muted)" }}>· {currentMonthName} · {cmPositions.length} עסקאות</span></h3>
+            <div className="flex flex-col gap-4">
+              {cmHasUnrealized && (
+                <div className="grid grid-cols-1 gap-3">
+                  <Kpi
+                    label="סך הכל (ממומש + פתוח)"
+                    value={pct(cmTotalPnlPct + cmOpenUnrealizedPct)}
+                    sub={`${money(cmTotalPnl + cmOpenUnrealized)} · ממומש ${money(cmTotalPnl)} + פתוח ${money(cmOpenUnrealized)}`}
+                    color={pnlColor(cmTotalPnl + cmOpenUnrealized)}
+                  />
+                </div>
+              )}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Kpi label="ממומש החודש" value={cmRealizedPositions.length ? pct(cmTotalPnlPct) : "—"} sub={cmRealizedPositions.length ? `${money(cmTotalPnl)} · ${cmRealizedPositions.length} סגורות` : "אין עסקאות סגורות החודש"} color={pnlColor(cmRealizedPositions.length ? cmTotalPnl : null)} />
+                <Kpi label="פתוח החודש" value={cmHasUnrealized ? pct(cmOpenUnrealizedPct) : "—"} sub={cmHasUnrealized ? `${money(cmOpenUnrealized)} · לפי מחיר נוכחי` : "אין עסקאות פתוחות החודש"} color={pnlColor(cmHasUnrealized ? cmOpenUnrealized : null)} />
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       <section className="mb-6">
         <PositionsCharts equity={equity} avgComparison={avgComparison} totals={totals} perTrade={perTrade} byAsset={byAsset} />
