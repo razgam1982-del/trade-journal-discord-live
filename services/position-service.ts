@@ -189,9 +189,11 @@ function finalize(pos: Position, portfolioSize: number): void {
     // A reduce/close only affects legs that were already open when it happened.
     const beforeEv = (o: { leg: PositionLeg; remaining: number }) => o.remaining > 1e-9 && o.leg.date <= ev.date;
 
-    // If close_percent was explicitly set (manual edit), the user has overridden
-    // any leg-scoped phrasing in the text — apply the fraction position-wide.
-    const explicitPct = ev.close_percent != null;
+    // A 100% fraction always means "close the whole position" — overrides
+    // any leg-scoped phrasing ('אחרונה' / 'היום') that may still be in the
+    // auto-parsed quantity_text. Also fires when the user explicitly sets
+    // close_percent (manual edit), even at < 100%.
+    const explicitPct = ev.close_percent != null || (frac != null && frac >= 0.999);
 
     if (!explicitPct && /אחרונ/.test(qt)) {
       // Leg-scoped: "עסקה אחרונה" (1 leg) or "N עסקאות אחרונות" (the N most recent
