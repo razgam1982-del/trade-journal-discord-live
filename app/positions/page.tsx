@@ -255,10 +255,39 @@ export default async function PositionsPage({
 
       <ProfitFactorHero profitFactor={profitFactor} grossWins={sumWins} grossLosses={sumLosses} closedCount={realized.length} winRate={winRate} wins={wins.length} losses={losses.length} />
 
+      {/* ביצועים — חודש נוכחי (קודם, כי זה הכי חשוב) */}
+      {cmPositions.length > 0 && (
+        <section className="mb-6">
+          <div className="rounded-2xl border-2 p-5" style={{ borderColor: "rgba(34,197,94,0.55)", background: "linear-gradient(135deg, rgba(34,197,94,0.05), transparent)" }}>
+            <h2 className="mb-4 text-lg font-extrabold" style={{ color: "var(--green)" }}>
+              ביצועים — חודש נוכחי <span className="text-sm font-normal text-[var(--muted)]">· {currentMonthName} · {cmPositions.length} עסקאות</span>
+            </h2>
+            <div className="flex flex-col gap-4">
+              {cmHasUnrealized && (
+                <div className="grid grid-cols-1 gap-3">
+                  <Kpi
+                    label="סך הכל החודש (ממומש + פתוח)"
+                    value={pct(cmTotalPnlPct + cmOpenUnrealizedPct)}
+                    sub={`${money(cmTotalPnl + cmOpenUnrealized)} · ממומש ${money(cmTotalPnl)} + פתוח ${money(cmOpenUnrealized)}`}
+                    color={pnlColor(cmTotalPnl + cmOpenUnrealized)}
+                  />
+                </div>
+              )}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Kpi label="ממומש החודש" value={cmRealizedPositions.length ? pct(cmTotalPnlPct) : "—"} sub={cmRealizedPositions.length ? `${money(cmTotalPnl)} · ${cmRealizedPositions.length} סגורות` : "אין עסקאות סגורות החודש"} color={pnlColor(cmRealizedPositions.length ? cmTotalPnl : null)} />
+                <Kpi label="פתוח החודש" value={cmHasUnrealized ? pct(cmOpenUnrealizedPct) : "—"} sub={cmHasUnrealized ? `${money(cmOpenUnrealized)} · לפי מחיר נוכחי` : "אין עסקאות פתוחות החודש"} color={pnlColor(cmHasUnrealized ? cmOpenUnrealized : null)} />
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
       <section className="mb-6 flex flex-col gap-4 lg:flex-row">
         {/* ימין — ביצועים (כל השאר) */}
-        <div className="rounded-2xl border-2 border-[var(--border)] p-4 lg:flex-[2]">
-          <h3 className="mb-3 text-sm font-bold text-[var(--muted)]">ביצועים — סך התיק <span className="font-normal" style={{ color: "var(--muted)" }}>· תקופה {periodMonths}</span></h3>
+        <div className="rounded-2xl border-2 p-5 lg:flex-[2]" style={{ borderColor: "rgba(148,163,184,0.35)" }}>
+          <h2 className="mb-4 text-lg font-extrabold text-[var(--muted)]">
+            ביצועים — סך התיק <span className="text-sm font-normal">· תקופה {periodMonths}</span>
+          </h2>
           <div className="flex flex-col gap-4">
             {/* סך הכל (ממומש + פתוח) — מופיע רק כשיש פתוח, אחרת ה"ממומש" כבר מסכם הכל */}
             {hasUnrealized && (
@@ -302,31 +331,6 @@ export default async function PositionsPage({
           </div>
         </div>
       </section>
-
-      {/* ביצועים — חודש נוכחי בלבד */}
-      {cmPositions.length > 0 && (
-        <section className="mb-6">
-          <div className="rounded-2xl border-2 p-4" style={{ borderColor: "rgba(34,197,94,0.4)" }}>
-            <h3 className="mb-3 text-sm font-bold text-[var(--muted)]">ביצועים — חודש נוכחי <span className="font-normal" style={{ color: "var(--muted)" }}>· {currentMonthName} · {cmPositions.length} עסקאות</span></h3>
-            <div className="flex flex-col gap-4">
-              {cmHasUnrealized && (
-                <div className="grid grid-cols-1 gap-3">
-                  <Kpi
-                    label="סך הכל (ממומש + פתוח)"
-                    value={pct(cmTotalPnlPct + cmOpenUnrealizedPct)}
-                    sub={`${money(cmTotalPnl + cmOpenUnrealized)} · ממומש ${money(cmTotalPnl)} + פתוח ${money(cmOpenUnrealized)}`}
-                    color={pnlColor(cmTotalPnl + cmOpenUnrealized)}
-                  />
-                </div>
-              )}
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <Kpi label="ממומש החודש" value={cmRealizedPositions.length ? pct(cmTotalPnlPct) : "—"} sub={cmRealizedPositions.length ? `${money(cmTotalPnl)} · ${cmRealizedPositions.length} סגורות` : "אין עסקאות סגורות החודש"} color={pnlColor(cmRealizedPositions.length ? cmTotalPnl : null)} />
-                <Kpi label="פתוח החודש" value={cmHasUnrealized ? pct(cmOpenUnrealizedPct) : "—"} sub={cmHasUnrealized ? `${money(cmOpenUnrealized)} · לפי מחיר נוכחי` : "אין עסקאות פתוחות החודש"} color={pnlColor(cmHasUnrealized ? cmOpenUnrealized : null)} />
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
 
       <section className="mb-6">
         <PositionsCharts equity={equity} avgComparison={avgComparison} totals={totals} perTrade={perTrade} byAsset={byAsset} />
