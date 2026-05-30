@@ -146,6 +146,7 @@ export default async function PositionsPage({
   const openPotentialCount = openPositions.filter((p) => p.potential_profit_percent != null).length;
   const totalLeftOnFloor = positions.reduce((s, p) => s + (p.left_on_floor_dollars ?? 0), 0);
   const openUnrealized = openPositions.reduce((s, p) => s + (p.unrealized_pnl_dollars ?? 0), 0);
+  const openUnrealizedPct = openPositions.reduce((s, p) => s + (p.unrealized_pnl_percent ?? 0), 0);
   const hasUnrealized = openPositions.some((p) => p.unrealized_pnl_dollars != null);
   const r = (p: { r_achieved: number | null } | null) => (p?.r_achieved != null ? ` · ${p.r_achieved.toFixed(2)}R` : "");
 
@@ -234,8 +235,8 @@ export default async function PositionsPage({
           <div className="flex flex-col gap-4">
             {/* זוג: רווח/הפסד ממומש ↔ פתוח */}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Kpi label="סך רווח/הפסד ממומש" value={realized.length ? money(totalPnl) : "—"} sub={realized.length ? `ממוצע לעסקה: ${money(avgPnl)} · ${pct(totalPnlPct)}` : "מלא מחירי יציאה"} color={pnlColor(realized.length ? totalPnl : null)} />
-              <Kpi label="רווח פתוח על השולחן" value={hasUnrealized ? money(openUnrealized) : "—"} sub="רווח/הפסד פתוח · לפי מחיר נוכחי" color={pnlColor(hasUnrealized ? openUnrealized : null)} />
+              <Kpi label="סך רווח/הפסד ממומש" value={realized.length ? pct(totalPnlPct) : "—"} sub={realized.length ? money(totalPnl) : "מלא מחירי יציאה"} color={pnlColor(realized.length ? totalPnl : null)} />
+              <Kpi label="רווח פתוח על השולחן" value={hasUnrealized ? pct(openUnrealizedPct) : "—"} sub={hasUnrealized ? `${money(openUnrealized)} · לפי מחיר נוכחי` : "רווח/הפסד פתוח · לפי מחיר נוכחי"} color={pnlColor(hasUnrealized ? openUnrealized : null)} />
             </div>
             {/* זוג: ממוצע עסקה מרוויחה ↔ מפסידה */}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

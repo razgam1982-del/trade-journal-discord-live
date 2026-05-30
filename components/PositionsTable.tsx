@@ -242,6 +242,36 @@ function LegsTable({ p }: { p: Position }) {
   );
 }
 
+const HEB_MONTHS = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+
+// Group positions by year-month of opened_at and compute per-month aggregates.
+// Returns ordered groups (chronological by month).
+function groupByMonth(positions: Position[]) {
+  const groups = new Map<string, { key: string; name: string; positions: Position[]; realized: number; open: number; closedCount: number; openCount: number; wins: number; losses: number }>();
+  for (const p of positions) {
+    const d = new Date(p.opened_at);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    if (!groups.has(key)) {
+      groups.set(key, {
+        key, name: `${HEB_MONTHS[d.getMonth()]} ${d.getFullYear()}`,
+        positions: [], realized: 0, open: 0, closedCount: 0, openCount: 0, wins: 0, losses: 0,
+      });
+    }
+    const g = groups.get(key)!;
+    g.positions.push(p);
+    g.realized += p.pnl_dollars ?? 0;
+    g.open += p.unrealized_pnl_dollars ?? 0;
+    if (p.pnl_dollars != null) {
+      g.closedCount++;
+      if (p.pnl_dollars > 0) g.wins++;
+      else if (p.pnl_dollars < 0) g.losses++;
+    } else {
+      g.openCount++;
+    }
+  }
+  return [...groups.values()].sort((a, b) => a.key.localeCompare(b.key));
+}
+
 export function PositionsTable({ positions }: { positions: Position[] }) {
   const canEdit = useCanEdit();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -272,10 +302,26 @@ export function PositionsTable({ positions }: { positions: Position[] }) {
           {compact ? "▼ הצג תצוגה מלאה" : "▲ צמצם תצוגה (שורה ראשית בלבד)"}
         </button>
       </div>
-      {positions.map((p, i) => {
-        const result = p.status === "open" ? "open" : (p.pnl_dollars ?? 0) >= 0 ? "win" : "loss";
-        const border = result === "win" ? GREEN : result === "loss" ? RED : ACCENT;
-        const key = p.key + p.opened_at;
+      {(() => {
+        const groups = groupByMonth(positions);
+        let globalIdx = 0;
+        return groups.map((g) => (
+          <Fragment key={`m-${g.key}`}>
+            <MonthHeader group={g} />
+            {g.positions.map((p) => {
+              const i = globalIdx++;
+              return renderPosition(p, i);
+            })}
+          </Fragment>
+        ));
+      })()}
+    </div>
+  );
+
+  function renderPosition(p: Position, i: number) {
+    const result = p.status === "open" ? "open" : (p.pnl_dollars ?? 0) >= 0 ? "win" : "loss";
+    const border = result === "win" ? GREEN : result === "loss" ? RED : ACCENT;
+    const key = p.key + p.opened_at;
         const isOpen = expanded.has(key);
         const partial = p.status === "open" && p.legs.some((l) => l.kind === "reduce" || l.kind === "close");
         const total$ = p.pnl_dollars != null || p.unrealized_pnl_dollars != null ? (p.pnl_dollars ?? 0) + (p.unrealized_pnl_dollars ?? 0) : null;
@@ -351,7 +397,28 @@ export function PositionsTable({ positions }: { positions: Position[] }) {
             )}
           </div>
         );
-      })}
+  }
+}
+
+function MonthHeader({ group }: { group: ReturnType<typeof groupByMonth>[number] }) {
+  const total = group.realized + group.open;
+  const totalColor = total > 0 ? GREEN : total < 0 ? RED : undefined;
+  const realizedColor = group.realized > 0 ? GREEN : group.realized < 0 ? RED : undefined;
+  const openColor = group.open > 0 ? GREEN : group.open < 0 ? RED : undefined;
+  return (
+    <div className="mt-3 first:mt-0 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-[var(--border)] bg-[var(--panel-2)] px-5 py-3" style={{ borderRightWidth: '4px', borderRightColor: ACCENT }}>
+      <span className="text-lg font-bold">{group.name}</span>
+      <span className="text-sm text-[var(--muted)]">·</span>
+      <span className="text-base font-bold tabular-nums" style={{ color: totalColor }}>{money(total)}</span>
+      <span className="text-xs text-[var(--muted)]">סך</span>
+      <span className="text-sm text-[var(--muted)]">·</span>
+      <span className="text-sm tabular-nums" style={{ color: realizedColor }}>{money(group.realized)} <span className="text-[var(--muted)] text-xs font-normal">ממומש</span></span>
+      <span className="text-sm tabular-nums" style={{ color: openColor }}>{money(group.open)} <span className="text-[var(--muted)] text-xs font-normal">פתוח</span></span>
+      <span className="text-sm text-[var(--muted)]">·</span>
+      <span className="text-sm tabular-nums text-[var(--muted)]">{group.positions.length} עסקאות</span>
+      <span className="text-sm tabular-nums text-[var(--muted)]">{group.wins} רווחים</span>
+      <span className="text-sm tabular-nums text-[var(--muted)]">{group.losses} הפסדים</span>
+      {group.openCount > 0 && <span className="text-sm tabular-nums text-[var(--muted)]">{group.openCount} פתוחות</span>}
     </div>
   );
 }

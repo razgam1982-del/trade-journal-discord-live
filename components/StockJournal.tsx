@@ -292,13 +292,27 @@ export function StockJournal({ trades }: { trades: StockTrade[] }) {
 
       <ProfitFactorHero profitFactor={profitFactor} grossWins={sumWins} grossLosses={sumLosses} closedCount={closed.length} winRate={winRate} wins={wins.length} losses={losses.length} />
 
-      <section className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Kpi label="סך רווח/הפסד (סגורות)" value={closed.length ? money(totalPL) : "—"} sub={closed.length ? `ממוצע לעסקה: ${money(avgPL)}` : undefined} color={plColor(closed.length ? totalPL : null)} />
-        <Kpi label="ממוצע עסקה מרוויחה" value={wins.length ? money(avgWin) : "—"} sub={`סה״כ רווחים: ${money(sumWins)}`} color={wins.length ? GREEN : undefined} />
-        <Kpi label="ממוצע עסקה מפסידה" value={losses.length ? money(avgLoss) : "—"} sub={`סה״כ הפסדים: ${money(sumLosses)}`} color={losses.length ? RED : undefined} />
-        <Kpi label="העסקה הטובה ביותר" value={best ? money(best.c.pl) : "—"} sub={best ? `${best.t.symbol} · ${rstr(best.c.rr)}` : undefined} color={best ? GREEN : undefined} />
-        <Kpi label="העסקה הגרועה ביותר" value={worst ? money(worst.c.pl) : "—"} sub={worst ? `${worst.t.symbol} · ${rstr(worst.c.rr)}` : undefined} color={worst ? RED : undefined} />
-        <Kpi label="כסף שהושאר על הרצפה" value={totalLeftOnFloor > 0 ? money(totalLeftOnFloor) : "—"} sub="פער מהשיא (בעסקאות שמילאת מחיר שיא)" color="var(--gold)" />
+      <section className="mb-6">
+        <div className="rounded-2xl border-2 border-[var(--border)] p-4">
+          <h3 className="mb-3 text-sm font-bold text-[var(--muted)]">ביצועים</h3>
+          <div className="flex flex-col gap-4">
+            {/* זוג: רווח/הפסד ממומש ↔ כסף שהושאר על הרצפה */}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Kpi label="סך רווח/הפסד (סגורות)" value={closed.length ? money(totalPL) : "—"} sub={closed.length ? `ממוצע לעסקה: ${money(avgPL)}` : undefined} color={plColor(closed.length ? totalPL : null)} />
+              <Kpi label="כסף שהושאר על הרצפה" value={totalLeftOnFloor > 0 ? money(totalLeftOnFloor) : "—"} sub="פער מהשיא (בעסקאות שמילאת מחיר שיא)" color="var(--gold)" />
+            </div>
+            {/* זוג: ממוצע עסקה מרוויחה ↔ מפסידה */}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Kpi label="ממוצע עסקה מרוויחה" value={wins.length ? money(avgWin) : "—"} sub={`סה״כ רווחים: ${money(sumWins)}`} color={wins.length ? GREEN : undefined} />
+              <Kpi label="ממוצע עסקה מפסידה" value={losses.length ? money(avgLoss) : "—"} sub={`סה״כ הפסדים: ${money(sumLosses)}`} color={losses.length ? RED : undefined} />
+            </div>
+            {/* זוג: העסקה הטובה ↔ הגרועה ביותר */}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Kpi label="העסקה הטובה ביותר" value={best ? money(best.c.pl) : "—"} sub={best ? `${best.t.symbol} · ${rstr(best.c.rr)}` : undefined} color={best ? GREEN : undefined} />
+              <Kpi label="העסקה הגרועה ביותר" value={worst ? money(worst.c.pl) : "—"} sub={worst ? `${worst.t.symbol} · ${rstr(worst.c.rr)}` : undefined} color={worst ? RED : undefined} />
+            </div>
+          </div>
+        </div>
       </section>
 
       <section className="mb-6">
