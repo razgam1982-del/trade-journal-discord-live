@@ -330,6 +330,37 @@ export function StockJournal({ trades }: { trades: StockTrade[] }) {
           </button>
         </div>
 
+        {/* Month nav chips — clickable, jump to that month's section below */}
+        {(() => {
+          const HEB_MONTHS_NAV = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+          const navMap = new Map<string, { count: number; total: number }>();
+          for (const r of rows) {
+            const k = r.t.trade_date.slice(0, 7);
+            if (!navMap.has(k)) navMap.set(k, { count: 0, total: 0 });
+            const g = navMap.get(k)!;
+            g.count++;
+            if (r.c.result !== "open") g.total += r.c.pl;
+          }
+          const navMonths = [...navMap.entries()].sort((a, b) => b[0].localeCompare(a[0]));
+          if (navMonths.length < 2) return null;
+          return (
+            <div className="mb-4 flex flex-wrap gap-2">
+              {navMonths.map(([k, g]) => {
+                const [y, m] = k.split("-");
+                const pctOfPort = (g.total / 100_000) * 100;
+                const c = g.total > 0 ? GREEN : g.total < 0 ? RED : "var(--muted)";
+                return (
+                  <a key={`nav-${k}`} href={`#smonth-${k}`} className="flex flex-col rounded-xl border border-[var(--border)] bg-[var(--panel)] px-4 py-2 transition hover:border-[var(--accent)] hover:-translate-y-px" style={{ textDecoration: "none", minWidth: 150 }}>
+                    <span className="text-xs text-[var(--muted)]">{HEB_MONTHS_NAV[+m - 1]} {y}</span>
+                    <span className="text-xl font-bold tabular-nums" style={{ color: c }}>{pctOfPort >= 0 ? "+" : ""}{pctOfPort.toFixed(2)}%</span>
+                    <span className="text-xs tabular-nums" style={{ color: c }}>{money(g.total)} · {g.count} עסקאות</span>
+                  </a>
+                );
+              })}
+            </div>
+          );
+        })()}
+
         <div className="flex flex-col gap-3">
             {(() => {
               const HEB_MONTHS = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
@@ -377,7 +408,7 @@ export function StockJournal({ trades }: { trades: StockTrade[] }) {
                 <Fragment key={`item-${t.id}`}>
                 {showMonthHeader && (
                   <Fragment>
-                    <div className="mt-3 first:mt-0 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-[var(--border)] bg-[var(--panel-2)] px-5 py-3" style={{ borderRightWidth: "4px", borderRightColor: ACCENT }}>
+                    <div id={`smonth-${monthKey}`} className="mt-3 first:mt-0 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-[var(--border)] bg-[var(--panel-2)] px-5 py-3 scroll-mt-4" style={{ borderRightWidth: "4px", borderRightColor: ACCENT }}>
                       <span className="text-lg font-bold">{monthName}</span>
                       <span className="text-sm text-[var(--muted)]">·</span>
                       <span className="text-base font-bold tabular-nums" style={{ color: ag.total > 0 ? GREEN : ag.total < 0 ? RED : undefined }}>{money(ag.total)}</span>
