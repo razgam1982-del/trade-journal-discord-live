@@ -327,17 +327,17 @@ export default async function PositionsPage({
       <ProfitFactorHero profitFactor={profitFactor} grossWins={sumWins} grossLosses={sumLosses} closedCount={realized.length} winRate={winRate} wins={wins.length} losses={losses.length} />
 
       {/* Leverage selector — what-if scaling on per-trade risk size */}
-      <section className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--border)] bg-[var(--panel)] px-5 py-3">
+      <section className="mb-6 flex flex-col items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--panel)] px-5 py-4 text-center">
         <div className="text-sm">
-          <span className="font-bold text-[var(--text)]">מינוף "מה היה אם":</span>{" "}
+          <span className="font-bold text-[var(--text)]">מינוף &quot;מה היה אם&quot;:</span>{" "}
           <span className="text-[var(--muted)]">מציג מה התשואה הייתה בסיכון כפול / משולש מהמוצע בעסקאות. R לא משתנה (מדד יחסי).</span>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center justify-center gap-2">
           {[1, 2, 3].map((n) => (
             <Link
               key={n}
               href={`/positions?${new URLSearchParams({ ...(selected ? { channel: selected } : {}), ...(n === 1 ? {} : { lev: String(n) }) }).toString()}`}
-              className="rounded-lg border px-3 py-1.5 text-sm font-bold transition"
+              className="rounded-lg border px-4 py-1.5 text-sm font-bold transition"
               style={
                 n === lev
                   ? { background: "var(--accent)", color: "#03131f", borderColor: "var(--accent)" }
