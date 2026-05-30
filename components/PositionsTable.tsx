@@ -341,6 +341,7 @@ export function PositionsTable({ positions, channelId }: { positions: Position[]
             {groups.map((g) => (
               <Fragment key={`m-${g.key}`}>
                 <MonthHeader group={g} />
+                <MonthBreakdown group={g} />
                 {g.positions.map((p) => {
                   const i = globalIdx++;
                   return renderPosition(p, i);
@@ -436,6 +437,87 @@ export function PositionsTable({ positions, channelId }: { positions: Position[]
           </div>
         );
   }
+}
+
+function MonthBreakdown({ group }: { group: ReturnType<typeof groupByMonth>[number] }) {
+  const closed = group.positions.filter((p) => p.pnl_dollars != null);
+  const wins = closed.filter((p) => (p.pnl_dollars ?? 0) > 0);
+  const losses = closed.filter((p) => (p.pnl_dollars ?? 0) < 0);
+  const sumWins = wins.reduce((s, p) => s + (p.pnl_dollars ?? 0), 0);
+  const sumLosses = losses.reduce((s, p) => s + (p.pnl_dollars ?? 0), 0);
+  const avgWin = wins.length ? sumWins / wins.length : null;
+  const avgLoss = losses.length ? sumLosses / losses.length : null;
+  const avgPL = closed.length ? (sumWins + sumLosses) / closed.length : null;
+  const winRate = (wins.length + losses.length) ? (wins.length / (wins.length + losses.length)) * 100 : null;
+  const profitFactor = sumLosses !== 0 ? sumWins / Math.abs(sumLosses) : null;
+  const realizedR = closed.reduce((s, p) => s + (p.r_achieved ?? 0), 0);
+  const avgR = closed.length ? realizedR / closed.length : null;
+  let best: typeof closed[number] | null = null;
+  let worst: typeof closed[number] | null = null;
+  for (const p of closed) {
+    if (!best || (p.pnl_dollars ?? 0) > (best.pnl_dollars ?? 0)) best = p;
+    if (!worst || (p.pnl_dollars ?? 0) < (worst.pnl_dollars ?? 0)) worst = p;
+  }
+  if (closed.length === 0) return null;
+  const cellCls = "rounded-lg border border-[var(--border)] bg-[var(--panel)] px-3 py-2";
+  const labelCls = "text-[10px] text-[var(--muted)] mb-0.5";
+  const valCls = "tabular-nums font-bold text-sm";
+  return (
+    <div className="mt-2 mb-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+      <div className={cellCls}>
+        <div className={labelCls}>עסקאות (סגורות · רווחיות · מפסידות)</div>
+        <div className={valCls}>{closed.length} · <span style={{ color: GREEN }}>{wins.length}</span> · <span style={{ color: RED }}>{losses.length}</span></div>
+      </div>
+      <div className={cellCls}>
+        <div className={labelCls}>אחוז הצלחה</div>
+        <div className={valCls} style={{ color: winRate != null && winRate >= 50 ? GREEN : RED }}>
+          {winRate != null ? `${winRate.toFixed(1)}%` : "—"}
+        </div>
+      </div>
+      <div className={cellCls}>
+        <div className={labelCls}>מכפיל רווח/הפסד</div>
+        <div className={valCls} style={{ color: profitFactor != null && profitFactor >= 1 ? GREEN : RED }}>
+          {profitFactor != null ? profitFactor.toFixed(2) : "—"}
+        </div>
+      </div>
+      <div className={cellCls}>
+        <div className={labelCls}>ממוצע R לעסקה</div>
+        <div className={valCls} style={{ color: avgR != null && avgR >= 0 ? GREEN : RED }}>
+          {avgR != null ? `${avgR >= 0 ? "+" : ""}${avgR.toFixed(2)}R` : "—"}
+        </div>
+      </div>
+      <div className={cellCls}>
+        <div className={labelCls}>ממוצע רווח/הפסד לעסקה</div>
+        <div className={valCls} style={{ color: avgPL != null && avgPL >= 0 ? GREEN : RED }}>
+          {avgPL != null ? money(avgPL) : "—"}
+        </div>
+      </div>
+      <div className={cellCls}>
+        <div className={labelCls}>ממוצע עסקה מרוויחה</div>
+        <div className={valCls} style={{ color: GREEN }}>{avgWin != null ? money(avgWin) : "—"}</div>
+      </div>
+      <div className={cellCls}>
+        <div className={labelCls}>ממוצע עסקה מפסידה</div>
+        <div className={valCls} style={{ color: RED }}>{avgLoss != null ? money(avgLoss) : "—"}</div>
+      </div>
+      <div className={cellCls}>
+        <div className={labelCls}>סך רווחים גולמיים</div>
+        <div className={valCls} style={{ color: GREEN }}>{money(sumWins)}</div>
+      </div>
+      <div className={cellCls}>
+        <div className={labelCls}>סך הפסדים גולמיים</div>
+        <div className={valCls} style={{ color: RED }}>{money(sumLosses)}</div>
+      </div>
+      <div className={cellCls}>
+        <div className={labelCls}>הטוב/גרוע ביותר</div>
+        <div className={valCls}>
+          <span style={{ color: GREEN }}>{best ? `${best.asset} ${money(best.pnl_dollars)}` : "—"}</span>
+          <span className="text-[var(--muted)] mx-1">|</span>
+          <span style={{ color: RED }}>{worst ? `${worst.asset} ${money(worst.pnl_dollars)}` : "—"}</span>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function MonthHeader({ group }: { group: ReturnType<typeof groupByMonth>[number] }) {

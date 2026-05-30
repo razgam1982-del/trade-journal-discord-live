@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { Fragment, useMemo, useState, useTransition } from "react";
 import type { StockTrade, StockTradeInput, StockLeg } from "@/types";
 import { calcStockTrade } from "@/lib/stock-calc";
 import { PositionsCharts } from "./PositionsCharts";
@@ -331,12 +331,76 @@ export function StockJournal({ trades }: { trades: StockTrade[] }) {
         </div>
 
         <div className="flex flex-col gap-3">
-            {[...rows].sort((a, b) => (b.t.trade_date + String(b.t.seq).padStart(6,'0')).localeCompare(a.t.trade_date + String(a.t.seq).padStart(6,'0'))).map(({ t, c, lof }, i) => {
+            {(() => {
+              const HEB_MONTHS = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+              const sorted = [...rows].sort((a, b) => (b.t.trade_date + String(b.t.seq).padStart(6,'0')).localeCompare(a.t.trade_date + String(a.t.seq).padStart(6,'0')));
+              // Pre-compute per-month aggregates so the header can sit above the trade cards.
+              const monthAgg = new Map<string, {
+                list: typeof sorted; closed: typeof sorted; wins: typeof sorted; losses: typeof sorted;
+                sumWins: number; sumLosses: number; total: number;
+              }>();
+              for (const r of sorted) {
+                const k = r.t.trade_date.slice(0, 7);
+                if (!monthAgg.has(k)) monthAgg.set(k, { list: [], closed: [], wins: [], losses: [], sumWins: 0, sumLosses: 0, total: 0 });
+                const g = monthAgg.get(k)!;
+                g.list.push(r);
+                if (r.c.result !== "open") {
+                  g.closed.push(r);
+                  if (r.c.result === "win") { g.wins.push(r); g.sumWins += r.c.pl; }
+                  if (r.c.result === "loss") { g.losses.push(r); g.sumLosses += r.c.pl; }
+                  g.total += r.c.pl;
+                }
+              }
+              let prevMonth = "";
+              return sorted.map(({ t, c, lof }, i) => {
               const border = c.result === "win" ? GREEN : c.result === "loss" ? RED : ACCENT;
               const isOpen = expanded.has(t.id);
               const isOpenTrade = c.result === "open";
+              const monthKey = t.trade_date.slice(0, 7);
+              const showMonthHeader = monthKey !== prevMonth;
+              prevMonth = monthKey;
+              const ag = monthAgg.get(monthKey)!;
+              const winRateM = ag.wins.length + ag.losses.length ? (ag.wins.length / (ag.wins.length + ag.losses.length)) * 100 : null;
+              const pfM = ag.sumLosses !== 0 ? ag.sumWins / Math.abs(ag.sumLosses) : null;
+              const avgWinM = ag.wins.length ? ag.sumWins / ag.wins.length : null;
+              const avgLossM = ag.losses.length ? ag.sumLosses / ag.losses.length : null;
+              const avgPLM = ag.closed.length ? ag.total / ag.closed.length : null;
+              let bestM: typeof ag.closed[number] | null = null;
+              let worstM: typeof ag.closed[number] | null = null;
+              for (const r of ag.closed) { if (!bestM || r.c.pl > bestM.c.pl) bestM = r; if (!worstM || r.c.pl < worstM.c.pl) worstM = r; }
+              const [yr, mo] = monthKey.split("-");
+              const monthName = `${HEB_MONTHS[+mo - 1]} ${yr}`;
+              const cellCls = "rounded-lg border border-[var(--border)] bg-[var(--panel)] px-3 py-2";
+              const labelCls = "text-[10px] text-[var(--muted)] mb-0.5";
+              const valCls = "tabular-nums font-bold text-sm";
               return (
-                <div key={t.id} className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--panel)]" style={{ boxShadow: `inset 4px 0 0 0 ${border}` }}>
+                <Fragment key={`item-${t.id}`}>
+                {showMonthHeader && (
+                  <Fragment>
+                    <div className="mt-3 first:mt-0 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-[var(--border)] bg-[var(--panel-2)] px-5 py-3" style={{ borderRightWidth: "4px", borderRightColor: ACCENT }}>
+                      <span className="text-lg font-bold">{monthName}</span>
+                      <span className="text-sm text-[var(--muted)]">·</span>
+                      <span className="text-base font-bold tabular-nums" style={{ color: ag.total > 0 ? GREEN : ag.total < 0 ? RED : undefined }}>{money(ag.total)}</span>
+                      <span className="text-xs text-[var(--muted)]">סך</span>
+                      <span className="text-sm text-[var(--muted)]">·</span>
+                      <span className="text-sm tabular-nums text-[var(--muted)]">{ag.list.length} עסקאות · {ag.wins.length} רווחים · {ag.losses.length} הפסדים</span>
+                    </div>
+                    {ag.closed.length > 0 && (
+                      <div className="mt-2 mb-1 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+                        <div className={cellCls}><div className={labelCls}>עסקאות (סגורות · רווחיות · מפסידות)</div><div className={valCls}>{ag.closed.length} · <span style={{ color: GREEN }}>{ag.wins.length}</span> · <span style={{ color: RED }}>{ag.losses.length}</span></div></div>
+                        <div className={cellCls}><div className={labelCls}>אחוז הצלחה</div><div className={valCls} style={{ color: winRateM != null && winRateM >= 50 ? GREEN : RED }}>{winRateM != null ? `${winRateM.toFixed(1)}%` : "—"}</div></div>
+                        <div className={cellCls}><div className={labelCls}>מכפיל רווח/הפסד</div><div className={valCls} style={{ color: pfM != null && pfM >= 1 ? GREEN : RED }}>{pfM != null ? pfM.toFixed(2) : "—"}</div></div>
+                        <div className={cellCls}><div className={labelCls}>ממוצע רווח/הפסד לעסקה</div><div className={valCls} style={{ color: avgPLM != null && avgPLM >= 0 ? GREEN : RED }}>{avgPLM != null ? money(avgPLM) : "—"}</div></div>
+                        <div className={cellCls}><div className={labelCls}>ממוצע עסקה מרוויחה</div><div className={valCls} style={{ color: GREEN }}>{avgWinM != null ? money(avgWinM) : "—"}</div></div>
+                        <div className={cellCls}><div className={labelCls}>ממוצע עסקה מפסידה</div><div className={valCls} style={{ color: RED }}>{avgLossM != null ? money(avgLossM) : "—"}</div></div>
+                        <div className={cellCls}><div className={labelCls}>סך רווחים גולמיים</div><div className={valCls} style={{ color: GREEN }}>{money(ag.sumWins)}</div></div>
+                        <div className={cellCls}><div className={labelCls}>סך הפסדים גולמיים</div><div className={valCls} style={{ color: RED }}>{money(ag.sumLosses)}</div></div>
+                        <div className={cellCls} style={{ gridColumn: "span 2" }}><div className={labelCls}>הטוב/גרוע ביותר</div><div className={valCls}><span style={{ color: GREEN }}>{bestM ? `${bestM.t.symbol} ${money(bestM.c.pl)}` : "—"}</span><span className="text-[var(--muted)] mx-1">|</span><span style={{ color: RED }}>{worstM ? `${worstM.t.symbol} ${money(worstM.c.pl)}` : "—"}</span></div></div>
+                      </div>
+                    )}
+                  </Fragment>
+                )}
+                <div className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--panel)]" style={{ boxShadow: `inset 4px 0 0 0 ${border}` }}>
                   {/* top line */}
                   <div className="flex items-start justify-between gap-4 px-5 py-4">
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-base tabular-nums">
@@ -404,8 +468,10 @@ export function StockJournal({ trades }: { trades: StockTrade[] }) {
                     </>
                   )}
                 </div>
+                </Fragment>
               );
-            })}
+            });
+            })()}
           </div>
       </section>
 
