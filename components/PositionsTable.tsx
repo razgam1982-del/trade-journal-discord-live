@@ -9,6 +9,7 @@ import { EditableCurrentPrice } from "./EditableCurrentPrice";
 import { EditablePeak } from "./EditablePeak";
 import { FilledToggle } from "./FilledToggle";
 import { DeleteButton } from "./DeleteButton";
+import { ClosePositionButton } from "./ClosePositionButton";
 import { useCanEdit } from "@/components/EditMode";
 import { deleteSignal, deletePosition } from "@/app/positions/actions";
 
@@ -398,6 +399,9 @@ export function PositionsTable({ positions }: { positions: Position[] }) {
                   <span style={{ color: plColor(totalR) }}>{totalR != null ? `${totalR.toFixed(2)}R` : "—"}</span>
                 </div>
                 <Badge result={result} partial={partial} />
+                {p.status === "open" && anchorId && (
+                  <ClosePositionButton anchorSignalId={anchorId} currentPrice={p.current_price ?? p.avg_entry_price ?? null} />
+                )}
                 <DeleteButton onConfirm={() => deletePosition(p.signal_ids)} title="מחק את כל העסקה" label="מחק עסקה" />
               </div>
             </div>
