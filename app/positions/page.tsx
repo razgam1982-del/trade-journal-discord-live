@@ -96,7 +96,7 @@ export default async function PositionsPage({
           <h1 className="text-2xl font-bold">{selectedChannel.name}</h1>
           <p className="mt-1 text-sm text-[var(--muted)]">
             <Link href="/" className="underline" style={{ color: "var(--accent)" }}>← כל היומנים</Link>{" "}
-            · יומן מניות — כמות/מחיר/עמלות · רווח/הפסד ב-$ ו-R
+            · יומן סימולציות לימודי למניות — כמות/מחיר/עמלות · רווח/הפסד ב-$ ו-R
           </p>
         </header>
         <ChannelTabs channels={channels} selected={selected} />
@@ -186,7 +186,7 @@ export default async function PositionsPage({
     <main className="mx-auto w-full max-w-[1320px] px-6 py-8">
       <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">יומן מסחר — דיסקורד</h1>
+          <h1 className="text-2xl font-bold">יומן סימולציות לימודי — דיסקורד</h1>
           <p className="mt-1 text-sm text-[var(--muted)]">
             <Link href="/" className="underline" style={{ color: "var(--accent)" }}>
               ← כל היומנים

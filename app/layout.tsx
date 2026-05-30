@@ -8,8 +8,8 @@ const rubik = Rubik({
 });
 
 export const metadata: Metadata = {
-  title: "יומן מסחר — דיסקורד",
-  description: "יומן מסחר אוטומטי מהודעות דיסקורד",
+  title: "יומן סימולציות לימודי — דיסקורד",
+  description: "יומן סימולציות לימודי אוטומטי מהודעות דיסקורד",
 };
 
 export default function RootLayout({

@@ -5,7 +5,7 @@ export function Disclaimer() {
       <div className="flex items-start gap-3">
         <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-lg font-extrabold" style={{ background: "rgba(245,158,11,0.3)", color: "var(--gold)" }}>!</span>
         <div className="text-xl font-extrabold tracking-tight" style={{ color: "#fde047" }}>
-          יומן המסחר הלימודי מדמה תיק נוסטרו של $100,000
+          יומן סימולציות לימודי — מדמה תיק נוסטרו של $100,000
         </div>
       </div>
       <div className="ps-11 text-sm font-semibold" style={{ color: "#fcd34d" }}>

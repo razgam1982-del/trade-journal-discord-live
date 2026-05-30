@@ -50,7 +50,7 @@ export default async function JournalPage() {
     <main className="mx-auto w-full max-w-6xl px-6 py-8">
       <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">יומן מסחר — עסקאות מהדיסקורד</h1>
+          <h1 className="text-2xl font-bold">יומן סימולציות לימודי — עסקאות מהדיסקורד</h1>
           <p className="mt-1 text-sm text-[var(--muted)]">
             כל סיגנל שנכתב בערוץ מפורק אוטומטית ומופיע כאן ·{" "}
             <Link href="/positions" className="underline" style={{ color: "var(--accent)" }}>
