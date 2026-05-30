@@ -99,7 +99,7 @@ export function PositionsCharts({
               <YAxis stroke={AXIS} tick={{ fontSize: 11 }} tickFormatter={(v) => `${v.toFixed(1)}%`} width={70} />
               <Tooltip
                 contentStyle={tooltipStyle}
-                labelStyle={tipLabel}
+                labelStyle={{ ...tipLabel, display: "none" }}
                 itemStyle={tipItem}
                 formatter={((v: unknown, name: unknown) => [v == null ? "—" : `${Number(v).toFixed(2)}%`, String(name ?? "")]) as never}
               />

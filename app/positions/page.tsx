@@ -276,6 +276,8 @@ export default async function PositionsPage({
   const cmOpenUnrealized = cmPositions.reduce((s, p) => s + (p.unrealized_pnl_dollars ?? 0), 0);
   const cmOpenUnrealizedPct = cmPositions.reduce((s, p) => s + (p.unrealized_pnl_percent ?? 0), 0);
   const cmHasUnrealized = cmPositions.some((p) => p.unrealized_pnl_dollars != null);
+  const cmOpenPositions = cmPositions.filter((p) => p.status === "open");
+  const cmHasOpen = cmOpenPositions.length > 0;
 
   return (
     <EditModeProvider canEdit={canEdit}>
@@ -370,7 +372,7 @@ export default async function PositionsPage({
               )}
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <Kpi label="ממומש החודש" value={cmRealizedPositions.length ? pct(cmTotalPnlPct) : "—"} sub={cmRealizedPositions.length ? `${money(cmTotalPnl)} · ${cmRealizedPositions.length} סגורות` : "אין עסקאות סגורות החודש"} color={pnlColor(cmRealizedPositions.length ? cmTotalPnl : null)} />
-                <Kpi label="פתוח החודש" value={cmHasUnrealized ? pct(cmOpenUnrealizedPct) : "—"} sub={cmHasUnrealized ? `${money(cmOpenUnrealized)} · לפי מחיר נוכחי` : "אין עסקאות פתוחות החודש"} color={pnlColor(cmHasUnrealized ? cmOpenUnrealized : null)} />
+                <Kpi label="פתוח החודש" value={cmHasUnrealized ? pct(cmOpenUnrealizedPct) : (cmHasOpen ? `${cmOpenPositions.length} פתוחות` : "—")} sub={cmHasUnrealized ? `${money(cmOpenUnrealized)} · לפי מחיר נוכחי` : (cmHasOpen ? "ממתינות למחיר נוכחי לחישוב P/L" : "אין עסקאות פתוחות החודש")} color={cmHasUnrealized ? pnlColor(cmOpenUnrealized) : (cmHasOpen ? "var(--accent)" : undefined)} />
               </div>
             </div>
           </div>
