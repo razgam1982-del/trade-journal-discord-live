@@ -159,8 +159,10 @@ export default async function PositionsPage({
     cum += p.pnl_dollars ?? 0;
     equity.push({ label: `${p.asset} ${shortDate(p.closed_at ?? p.opened_at)}`, value: Math.round(cum) });
   }
-  const perTrade = positions
+  // Per-trade chart: oldest on left, newest on right (chronological L→R).
+  const perTrade = [...positions]
     .filter((p) => eff(p) != null)
+    .sort((a, b) => a.opened_at.localeCompare(b.opened_at))
     .map((p) => ({ label: `${p.asset} ${shortDate(p.opened_at)}`, pnl: Math.round(eff(p) as number) }));
   const byAssetMap = new Map<string, number>();
   for (const p of positions) {
