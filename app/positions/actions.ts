@@ -103,6 +103,73 @@ export async function savePositionPeak(signalId: string, value: number | null): 
   revalidatePath('/positions');
 }
 
+// Manually opens a new trade in the given channel. The raw text is parsed by
+// the same Claude parser the live Discord bot uses, so all the patterns the
+// channel relies on (immediate / trigger / limit / stop / TP / risk %) work
+// out of the box. The user can edit any field afterwards from the trade card.
+export async function openTradeManually(
+  channelId: string,
+  rawText: string,
+): Promise<void> {
+  await assertEditor();
+  if (!rawText.trim()) throw new Error('Empty message');
+
+  const { parseTradeMessage } = await import('@/services/trade-parser-service');
+  const parsed = await parseTradeMessage(rawText);
+
+  // Get channel info for the synthetic message.
+  const { data: ch, error: chErr } = await supabaseAdmin
+    .from('channels')
+    .select('channel_id, name')
+    .eq('channel_id', channelId)
+    .single();
+  if (chErr || !ch) throw new Error('Channel not found');
+
+  const nowIso = new Date().toISOString();
+  const tag = `manual-open-${Date.now()}`;
+
+  const { data: msg, error: msgErr } = await supabaseAdmin
+    .from('discord_messages')
+    .insert({
+      discord_message_id: tag,
+      channel_id: ch.channel_id,
+      channel_name: ch.name,
+      author: 'Manual',
+      raw_content: rawText.trim(),
+      created_at: nowIso,
+      received_at: nowIso,
+    })
+    .select()
+    .single();
+  if (msgErr || !msg) throw new Error(`Failed to create message: ${msgErr?.message}`);
+
+  const { error: sigErr } = await supabaseAdmin.from('trade_signals').insert({
+    message_id: msg.id,
+    signal_index: 0,
+    is_trade: parsed.is_trade,
+    asset: parsed.asset,
+    asset_raw: parsed.asset_raw,
+    direction: parsed.direction,
+    action: parsed.action,
+    entry_type: parsed.entry_type,
+    entry_price: parsed.entry_price,
+    exit_price: parsed.exit_price,
+    stop_price: parsed.stop_price,
+    tp_price: parsed.tp_price,
+    risk_percent: parsed.risk_percent,
+    quantity_text: parsed.quantity_text,
+    close_percent: parsed.close_percent,
+    parser_confidence: parsed.parser_confidence,
+    parser_notes: parsed.parser_notes ?? 'manual open via UI',
+    needs_review: false,
+    manually_edited: true,
+    excluded: false,
+  });
+  if (sigErr) throw new Error(`Failed to create signal: ${sigErr.message}`);
+
+  revalidatePath('/positions');
+}
+
 // Manually closes an open position by inserting a synthetic 100%-close signal
 // at the given price. Uses an anchor leg (an existing signal from the same
 // position) for asset/direction/channel metadata.

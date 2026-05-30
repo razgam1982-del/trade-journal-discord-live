@@ -3,6 +3,7 @@ import { getPositions } from "@/services/position-service";
 import { getPortfolioSize } from "@/services/settings-service";
 import { listChannels } from "@/services/channel-service";
 import { fetchBenchmarkSeries, spxPctAt } from "@/services/benchmark-service";
+import { OpenTradeButton } from "@/components/OpenTradeButton";
 import { listStockTrades, listDeletedStockTrades } from "@/services/stock-trade-service";
 import { listDeletedSignals } from "@/services/trade-signal-service";
 import { restoreSignal } from "@/app/positions/actions";
@@ -280,6 +281,7 @@ export default async function PositionsPage({
           <div className="rounded-xl border border-[var(--border)] bg-[var(--panel)] px-4 py-2 text-sm text-[var(--muted)]">
             תקופה: <strong className="text-[var(--text)]">{period}</strong> · סגורות: <strong className="text-[var(--text)]">{realized.length}</strong> · פתוחות: <strong className="text-[var(--accent)]">{openCount}</strong>
           </div>
+          {selected && <OpenTradeButton channelId={selected} />}
           {/* Leverage selector — what-if scaling on per-trade risk size */}
           <div className="flex items-center gap-1 rounded-xl border border-[var(--border)] bg-[var(--panel)] px-2 py-1.5 text-sm">
             <span className="me-1 text-[var(--muted)]">מינוף:</span>
