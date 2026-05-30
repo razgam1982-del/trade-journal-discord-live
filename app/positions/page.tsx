@@ -235,6 +235,17 @@ export default async function PositionsPage({
         <div className="rounded-2xl border-2 border-[var(--border)] p-4 lg:flex-[2]">
           <h3 className="mb-3 text-sm font-bold text-[var(--muted)]">ביצועים</h3>
           <div className="flex flex-col gap-4">
+            {/* סך הכל (ממומש + פתוח) — מופיע רק כשיש פתוח, אחרת ה"ממומש" כבר מסכם הכל */}
+            {hasUnrealized && (
+              <div className="grid grid-cols-1 gap-3">
+                <Kpi
+                  label="סך הכל (ממומש + פתוח)"
+                  value={pct(totalPnlPct + openUnrealizedPct)}
+                  sub={`${money(totalPnl + openUnrealized)} · ממומש ${money(totalPnl)} + פתוח ${money(openUnrealized)}`}
+                  color={pnlColor(totalPnl + openUnrealized)}
+                />
+              </div>
+            )}
             {/* זוג: רווח/הפסד ממומש ↔ פתוח */}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Kpi label="סך רווח/הפסד ממומש" value={realized.length ? pct(totalPnlPct) : "—"} sub={realized.length ? money(totalPnl) : "מלא מחירי יציאה"} color={pnlColor(realized.length ? totalPnl : null)} />
