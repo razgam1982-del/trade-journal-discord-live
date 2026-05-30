@@ -64,6 +64,7 @@ function TwoBars({ data }: { data: Point[] }) {
   );
 }
 
+type EquityPoint = { label: string; value: number; pct?: number; spxPct?: number | null };
 export function PositionsCharts({
   equity,
   avgComparison,
@@ -71,7 +72,7 @@ export function PositionsCharts({
   perTrade,
   byAsset,
 }: {
-  equity: Point[];
+  equity: EquityPoint[];
   avgComparison: Point[];
   totals: Point[];
   perTrade: Bar2[];
@@ -90,14 +91,20 @@ export function PositionsCharts({
     <div className="flex flex-col gap-4">
       {/* Row 1: equity (wide) + avg comparison + totals */}
       <div className="grid gap-4 lg:grid-cols-4">
-        <ChartCard title="עקומת הון מצטברת" sub="($) רווח/הפסד ממומש" className="lg:col-span-2">
+        <ChartCard title="עקומת הון מצטברת מול S&P 500" sub="(%) — תיק vs SPX ^GSPC" className="lg:col-span-2">
           <ResponsiveContainer>
             <LineChart data={equity} margin={{ top: 8, right: 12, left: 0, bottom: 8 }}>
               <CartesianGrid stroke={GRID} />
               <XAxis dataKey="label" stroke={AXIS} tick={{ fontSize: 11 }} />
-              <YAxis stroke={AXIS} tick={{ fontSize: 11 }} tickFormatter={money} width={70} />
-              <Tooltip contentStyle={tooltipStyle} labelStyle={tipLabel} itemStyle={tipItem} formatter={fmt("הון מצטבר")} />
-              <Line type="monotone" dataKey="value" stroke={GREEN} strokeWidth={2} dot={{ r: 3, fill: GREEN }} />
+              <YAxis stroke={AXIS} tick={{ fontSize: 11 }} tickFormatter={(v) => `${v.toFixed(1)}%`} width={70} />
+              <Tooltip
+                contentStyle={tooltipStyle}
+                labelStyle={tipLabel}
+                itemStyle={tipItem}
+                formatter={((v: unknown, name: unknown) => [v == null ? "—" : `${Number(v).toFixed(2)}%`, String(name ?? "")]) as never}
+              />
+              <Line type="monotone" dataKey="pct" name="התיק" stroke={GREEN} strokeWidth={2.5} dot={{ r: 3, fill: GREEN }} />
+              <Line type="monotone" dataKey="spxPct" name="SPX (S&P 500)" stroke="#f59e0b" strokeWidth={2} strokeDasharray="6 3" dot={false} />
             </LineChart>
           </ResponsiveContainer>
         </ChartCard>

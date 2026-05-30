@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getPositions } from "@/services/position-service";
 import { getPortfolioSize } from "@/services/settings-service";
 import { listChannels } from "@/services/channel-service";
+import { fetchBenchmarkSeries, spxPctAt } from "@/services/benchmark-service";
 import { listStockTrades, listDeletedStockTrades } from "@/services/stock-trade-service";
 import { listDeletedSignals } from "@/services/trade-signal-service";
 import { restoreSignal } from "@/app/positions/actions";
@@ -76,9 +77,15 @@ function Kpi({ label, value, sub, color }: { label: string; value: string; sub?:
 export default async function PositionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ channel?: string }>;
+  searchParams: Promise<{ channel?: string; lev?: string }>;
 }) {
-  const { channel } = await searchParams;
+  const { channel, lev: levRaw } = await searchParams;
+  // Leverage multiplier: 1 (default), 2, or 3. Applied to all P/L and % values
+  // so the user can "what-if" doubling/tripling the per-trade risk size.
+  const lev = (() => {
+    const n = parseInt(levRaw ?? "1", 10);
+    return n === 2 || n === 3 ? n : 1;
+  })();
   const channels = await listChannels();
   const selected =
     channel && channels.some((c) => c.channel_id === channel) ? channel : channels[0]?.channel_id;
@@ -116,7 +123,23 @@ export default async function PositionsPage({
     );
   }
 
-  const [positions, portfolioSize] = await Promise.all([getPositions(selected), getPortfolioSize()]);
+  const [positionsRaw, portfolioSize] = await Promise.all([getPositions(selected), getPortfolioSize()]);
+  // Apply the leverage multiplier to every $-and-% field. Note: stops/TPs are
+  // unchanged because they're price levels; only the position SIZE scales.
+  const positions = lev === 1 ? positionsRaw : positionsRaw.map((p) => ({
+    ...p,
+    pnl_dollars: p.pnl_dollars != null ? p.pnl_dollars * lev : null,
+    pnl_percent: p.pnl_percent != null ? p.pnl_percent * lev : null,
+    unrealized_pnl_dollars: p.unrealized_pnl_dollars != null ? p.unrealized_pnl_dollars * lev : null,
+    unrealized_pnl_percent: p.unrealized_pnl_percent != null ? p.unrealized_pnl_percent * lev : null,
+    total_risk_percent: p.total_risk_percent * lev,
+    potential_profit_percent: p.potential_profit_percent != null ? p.potential_profit_percent * lev : null,
+    left_on_floor_dollars: p.left_on_floor_dollars != null ? p.left_on_floor_dollars * lev : null,
+    left_on_floor_percent: p.left_on_floor_percent != null ? p.left_on_floor_percent * lev : null,
+    left_on_floor_r: p.left_on_floor_r,
+    r_achieved: p.r_achieved, // R is leverage-invariant
+    unrealized_r: p.unrealized_r,
+  }));
   const deletedSignals = canEdit ? await listDeletedSignals() : [];
 
   const openPositions = positions.filter((p) => p.status === "open");
@@ -152,12 +175,40 @@ export default async function PositionsPage({
 
   // Chart data. Effective P/L = realized if closed, else unrealized.
   const eff = (p: (typeof positions)[number]) => p.pnl_dollars ?? p.unrealized_pnl_dollars ?? null;
-  const equity: { label: string; value: number }[] = [];
-  if (realized.length) equity.push({ label: "התחלה", value: 0 });
+  const equity: { label: string; value: number; pct: number; date: string; spxPct?: number | null }[] = [];
+  const sortedRealized = [...realized].sort((a, b) => (a.closed_at ?? a.opened_at).localeCompare(b.closed_at ?? b.opened_at));
+  const firstDate = sortedRealized[0]?.closed_at ?? sortedRealized[0]?.opened_at ?? new Date().toISOString();
+  if (realized.length) equity.push({ label: "התחלה", value: 0, pct: 0, date: firstDate, spxPct: 0 });
   let cum = 0;
-  for (const p of [...realized].sort((a, b) => (a.closed_at ?? a.opened_at).localeCompare(b.closed_at ?? b.opened_at))) {
+  for (const p of sortedRealized) {
     cum += p.pnl_dollars ?? 0;
-    equity.push({ label: `${p.asset} ${shortDate(p.closed_at ?? p.opened_at)}`, value: Math.round(cum) });
+    equity.push({
+      label: `${p.asset} ${shortDate(p.closed_at ?? p.opened_at)}`,
+      value: Math.round(cum),
+      pct: (cum / portfolioSize) * 100,
+      date: p.closed_at ?? p.opened_at,
+    });
+  }
+  // Overlay SPX benchmark (^GSPC). Each equity point gets the SPX % return
+  // from the inception date snapped to its trade-close date.
+  const lastDate = equity[equity.length - 1]?.date ?? new Date().toISOString();
+  const spxSeries = await fetchBenchmarkSeries("^GSPC", firstDate, lastDate);
+  for (const e of equity) e.spxPct = spxPctAt(spxSeries, e.date);
+  const spxEndPct = equity[equity.length - 1]?.spxPct ?? null;
+
+  // Sharpe / Sortino on per-trade % returns (annualization is left out — these
+  // are intra-period stats for a small sample, more honest as raw ratios).
+  const tradeReturns = sortedRealized.map((p) => p.pnl_percent ?? 0);
+  let sharpe: number | null = null;
+  let sortino: number | null = null;
+  if (tradeReturns.length >= 2) {
+    const mean = tradeReturns.reduce((s, v) => s + v, 0) / tradeReturns.length;
+    const variance = tradeReturns.reduce((s, v) => s + (v - mean) ** 2, 0) / (tradeReturns.length - 1);
+    const std = Math.sqrt(variance);
+    sharpe = std > 0 ? mean / std : null;
+    const downsides = tradeReturns.filter((v) => v < 0).map((v) => (v - mean) ** 2);
+    const downsideStd = downsides.length ? Math.sqrt(downsides.reduce((s, v) => s + v, 0) / downsides.length) : 0;
+    sortino = downsideStd > 0 ? mean / downsideStd : null;
   }
   // Per-trade chart: oldest on left, newest on right (chronological L→R).
   const perTrade = [...positions]
@@ -228,6 +279,24 @@ export default async function PositionsPage({
           </div>
           <div className="rounded-xl border border-[var(--border)] bg-[var(--panel)] px-4 py-2 text-sm text-[var(--muted)]">
             תקופה: <strong className="text-[var(--text)]">{period}</strong> · סגורות: <strong className="text-[var(--text)]">{realized.length}</strong> · פתוחות: <strong className="text-[var(--accent)]">{openCount}</strong>
+          </div>
+          {/* Leverage selector — what-if scaling on per-trade risk size */}
+          <div className="flex items-center gap-1 rounded-xl border border-[var(--border)] bg-[var(--panel)] px-2 py-1.5 text-sm">
+            <span className="me-1 text-[var(--muted)]">מינוף:</span>
+            {[1, 2, 3].map((n) => (
+              <Link
+                key={n}
+                href={`/positions?${new URLSearchParams({ ...(selected ? { channel: selected } : {}), ...(n === 1 ? {} : { lev: String(n) }) }).toString()}`}
+                className="rounded-lg px-2.5 py-1 font-bold transition"
+                style={
+                  n === lev
+                    ? { background: "var(--accent)", color: "#03131f" }
+                    : { color: "var(--muted)" }
+                }
+              >
+                x{n}
+              </Link>
+            ))}
           </div>
         </div>
       </header>
@@ -318,6 +387,27 @@ export default async function PositionsPage({
             {/* כסף שהושאר על הרצפה */}
             <div className="grid grid-cols-1 gap-3">
               <Kpi label="כסף שהושאר על הרצפה" value={totalLeftOnFloor > 0 ? money(totalLeftOnFloor) : "—"} sub="פער מהשיא (בעסקאות שמילאת מחיר שיא)" color="var(--gold)" />
+            </div>
+            {/* Risk-adjusted metrics: Sharpe + Sortino + השוואה ל-SPX */}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <Kpi
+                label="מדד שארפ (Sharpe)"
+                value={sharpe != null ? sharpe.toFixed(2) : "—"}
+                sub="תשואה ÷ תנודתיות (לכל העסקאות) · גבוה יותר = טוב יותר"
+                color={sharpe != null ? (sharpe >= 0 ? "var(--green)" : "var(--red)") : undefined}
+              />
+              <Kpi
+                label="מדד סורטינו (Sortino)"
+                value={sortino != null ? sortino.toFixed(2) : "—"}
+                sub="תשואה ÷ תנודתיות שלילית (רק ירידות) · מודד יציבות בירידות"
+                color={sortino != null ? (sortino >= 0 ? "var(--green)" : "var(--red)") : undefined}
+              />
+              <Kpi
+                label="ביצועי SPX (S&P 500)"
+                value={spxEndPct != null ? pct(spxEndPct) : "—"}
+                sub={spxEndPct != null && totalPnlPct + (openUnrealizedPct ?? 0) != null ? `הפרש מהתיק: ${pct(totalPnlPct + (openUnrealizedPct ?? 0) - spxEndPct)}` : "השוואה לתקופה"}
+                color={spxEndPct != null ? (spxEndPct >= 0 ? "var(--green)" : "var(--red)") : undefined}
+              />
             </div>
           </div>
         </div>
