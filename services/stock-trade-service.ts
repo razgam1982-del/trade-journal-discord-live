@@ -6,12 +6,16 @@ export { calcStockTrade } from '@/lib/stock-calc';
 const STOCKS_CHANNEL = '932256154439020544';
 
 // All trades for the stocks channel, in display order.
-export async function listStockTrades(channelId: string = STOCKS_CHANNEL): Promise<StockTrade[]> {
-  const { data, error } = await supabaseAdmin
+// Public-read delay: when cutoffIso is set, hides trades created after the
+// cutoff. Owners pass null (or omit) and see everything live.
+export async function listStockTrades(channelId: string = STOCKS_CHANNEL, cutoffIso?: string | null): Promise<StockTrade[]> {
+  let q = supabaseAdmin
     .from('stock_trades')
     .select('*')
     .eq('channel_id', channelId)
-    .is('deleted_at', null)
+    .is('deleted_at', null);
+  if (cutoffIso) q = q.lte('created_at', cutoffIso);
+  const { data, error } = await q
     .order('seq', { ascending: true })
     .order('trade_date', { ascending: true });
   if (error) {

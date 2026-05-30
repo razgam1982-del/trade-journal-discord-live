@@ -338,11 +338,17 @@ function computePotential(pos: Position, portfolioSize: number): void {
 
 // Groups trade signals into positions. Source of truth stays in trade_signals;
 // positions are derived here and can always be recomputed.
-export async function getPositions(channelId?: string): Promise<Position[]> {
+export async function getPositions(channelId?: string, cutoffIso?: string | null): Promise<Position[]> {
   const allSignals = await listTradeSignals(1000);
-  const signals = channelId
+  const filtered = channelId
     ? allSignals.filter((s) => s.message.channel_id === channelId)
     : allSignals;
+  // Public-read delay: when a cutoff is set, hide signals from messages
+  // newer than the cutoff. Owners (editor mode) get cutoffIso = null and see
+  // everything in real time.
+  const signals = cutoffIso
+    ? filtered.filter((s) => s.message.created_at <= cutoffIso)
+    : filtered;
   // Chronological order (listTradeSignals returns newest-first).
   const chrono = [...signals].reverse();
 

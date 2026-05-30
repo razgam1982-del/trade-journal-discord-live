@@ -92,10 +92,16 @@ export default async function PositionsPage({
     channel && channels.some((c) => c.channel_id === channel) ? channel : channels[0]?.channel_id;
   const selectedChannel = channels.find((c) => c.channel_id === selected);
   const canEdit = await isEditor();
+  // Public-read delay: signals/trades newer than 12 hours are hidden from
+  // non-editors. The owner (edit mode) sees everything live.
+  const READ_DELAY_HOURS = 12;
+  const cutoffIso = canEdit
+    ? null
+    : new Date(Date.now() - READ_DELAY_HOURS * 60 * 60 * 1000).toISOString();
 
   // The stocks channel uses a separate shares/price/fees journal.
   if (selectedChannel?.template === "momentum_stocks") {
-    const trades = await listStockTrades(selected);
+    const trades = await listStockTrades(selected, cutoffIso);
     const deletedTrades = canEdit ? await listDeletedStockTrades(selected) : [];
     return (
       <EditModeProvider canEdit={canEdit}>
@@ -109,6 +115,15 @@ export default async function PositionsPage({
         </header>
         <ChannelTabs channels={channels} selected={selected} />
         <Disclaimer />
+        {!canEdit && (
+          <div className="mb-6 flex items-start gap-3 rounded-xl border px-4 py-3 text-sm leading-relaxed" style={{ background: "rgba(56,189,248,0.08)", borderColor: "rgba(56,189,248,0.35)", color: "#bae6fd" }}>
+            <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-base font-bold" style={{ background: "rgba(56,189,248,0.25)", color: "#7dd3fc" }}>⏱</span>
+            <div>
+              <strong style={{ color: "#7dd3fc" }}>תצוגה בדיליי של 12 שעות.</strong>{" "}
+              הנתונים והעסקאות המוצגים כאן ישנים בלפחות 12 שעות. אין להסיק מהיומן הזה על פעולות מסחר בזמן אמת. יומן סימולציות לימודי בלבד.
+            </div>
+          </div>
+        )}
         <StockJournal trades={trades} />
         <RecycleBin
           heading="סל מיחזור — עסקאות שנמחקו"
@@ -124,7 +139,7 @@ export default async function PositionsPage({
     );
   }
 
-  const [positionsRaw, portfolioSize] = await Promise.all([getPositions(selected), getPortfolioSize()]);
+  const [positionsRaw, portfolioSize] = await Promise.all([getPositions(selected, cutoffIso), getPortfolioSize()]);
   // Apply the leverage multiplier to every $-and-% field. Note: stops/TPs are
   // unchanged because they're price levels; only the position SIZE scales.
   const positions = lev === 1 ? positionsRaw : positionsRaw.map((p) => ({
@@ -325,6 +340,18 @@ export default async function PositionsPage({
       )}
 
       <Disclaimer />
+
+      {/* Public-read delay notice: when not editor mode, everything shown is
+          ≥12h old. Owner with edit mode sees real time. */}
+      {!canEdit && (
+        <div className="mb-6 flex items-start gap-3 rounded-xl border px-4 py-3 text-sm leading-relaxed" style={{ background: "rgba(56,189,248,0.08)", borderColor: "rgba(56,189,248,0.35)", color: "#bae6fd" }}>
+          <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-base font-bold" style={{ background: "rgba(56,189,248,0.25)", color: "#7dd3fc" }}>⏱</span>
+          <div>
+            <strong style={{ color: "#7dd3fc" }}>תצוגה בדיליי של 12 שעות.</strong>{" "}
+            הנתונים והעסקאות המוצגים כאן ישנים בלפחות 12 שעות. אין להסיק מהיומן הזה על פעולות מסחר בזמן אמת. יומן סימולציות לימודי בלבד.
+          </div>
+        </div>
+      )}
 
       <ProfitFactorHero profitFactor={profitFactor} grossWins={sumWins} grossLosses={sumLosses} closedCount={realized.length} winRate={winRate} wins={wins.length} losses={losses.length} />
 
