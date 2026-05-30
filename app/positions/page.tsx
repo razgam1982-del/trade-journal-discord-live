@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { isAllowedViewer } from "@/lib/auth/viewer";
 import { getPositions } from "@/services/position-service";
 import { getPortfolioSize } from "@/services/settings-service";
 import { listChannels } from "@/services/channel-service";
@@ -81,6 +83,12 @@ export default async function PositionsPage({
   searchParams: Promise<{ channel?: string; lev?: string }>;
 }) {
   const { channel, lev: levRaw } = await searchParams;
+  // Deep gate: even if the user has a session cookie, verify the signature
+  // and re-check Discord role membership (5-min cached). Bypassed for owner.
+  const { allowed } = await isAllowedViewer();
+  if (!allowed) {
+    redirect(`/login?next=${encodeURIComponent('/positions' + (channel ? `?channel=${channel}` : ''))}`);
+  }
   // Leverage multiplier: 1 (default), 2, or 3. Applied to all P/L and % values
   // so the user can "what-if" doubling/tripling the per-trade risk size.
   const lev = (() => {

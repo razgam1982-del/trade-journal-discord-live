@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { isAllowedViewer } from "@/lib/auth/viewer";
 import { listTradeSignals } from "@/services/trade-signal-service";
 import type { TradeSignalWithMessage } from "@/types";
 
@@ -44,6 +46,8 @@ const TH =
 const TD = "border-b border-[var(--border)] px-3 py-3 whitespace-nowrap";
 
 export default async function JournalPage() {
+  const { allowed } = await isAllowedViewer();
+  if (!allowed) redirect('/login?next=' + encodeURIComponent('/journal'));
   const signals = await listTradeSignals(200);
 
   return (

@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { isAllowedViewer } from "@/lib/auth/viewer";
 import { listChannels } from "@/services/channel-service";
 import { getPositions } from "@/services/position-service";
 import { listStockTrades, calcStockTrade } from "@/services/stock-trade-service";
@@ -16,6 +18,8 @@ function money(n: number): string {
 }
 
 export default async function Home() {
+  const { allowed } = await isAllowedViewer();
+  if (!allowed) redirect('/login');
   const channels = await listChannels();
   const summaries = await Promise.all(
     channels.map(async (c) => {
