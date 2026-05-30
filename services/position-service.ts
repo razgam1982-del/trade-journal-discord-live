@@ -189,7 +189,11 @@ function finalize(pos: Position, portfolioSize: number): void {
     // A reduce/close only affects legs that were already open when it happened.
     const beforeEv = (o: { leg: PositionLeg; remaining: number }) => o.remaining > 1e-9 && o.leg.date <= ev.date;
 
-    if (/אחרונ/.test(qt)) {
+    // If close_percent was explicitly set (manual edit), the user has overridden
+    // any leg-scoped phrasing in the text — apply the fraction position-wide.
+    const explicitPct = ev.close_percent != null;
+
+    if (!explicitPct && /אחרונ/.test(qt)) {
       // Leg-scoped: "עסקה אחרונה" (1 leg) or "N עסקאות אחרונות" (the N most recent
       // legs). A fraction ("חצי מהעסקה האחרונה") applies per leg; else close fully.
       const countMatch = qt.match(/(\d+)\s*עסק/);
@@ -198,7 +202,7 @@ function finalize(pos: Position, portfolioSize: number): void {
       for (let i = 0; i < count && i < cands.length; i++) {
         consume(cands[i], frac != null ? Math.min(frac, cands[i].remaining) : cands[i].remaining, ev);
       }
-    } else if (/היום/.test(qt)) {
+    } else if (!explicitPct && /היום/.test(qt)) {
       // "של היום" — every still-open leg opened on the same day.
       const d = dayOf(ev.date);
       for (const o of open) {
