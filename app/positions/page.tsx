@@ -300,25 +300,6 @@ export default async function PositionsPage({
           <div className="rounded-xl border border-[var(--border)] bg-[var(--panel)] px-4 py-2 text-sm text-[var(--muted)]">
             תקופה: <strong className="text-[var(--text)]">{period}</strong> · סגורות: <strong className="text-[var(--text)]">{realized.length}</strong> · פתוחות: <strong className="text-[var(--accent)]">{openCount}</strong>
           </div>
-          {selected && <OpenTradeButton channelId={selected} />}
-          {/* Leverage selector — what-if scaling on per-trade risk size */}
-          <div className="flex items-center gap-1 rounded-xl border border-[var(--border)] bg-[var(--panel)] px-2 py-1.5 text-sm">
-            <span className="me-1 text-[var(--muted)]">מינוף:</span>
-            {[1, 2, 3].map((n) => (
-              <Link
-                key={n}
-                href={`/positions?${new URLSearchParams({ ...(selected ? { channel: selected } : {}), ...(n === 1 ? {} : { lev: String(n) }) }).toString()}`}
-                className="rounded-lg px-2.5 py-1 font-bold transition"
-                style={
-                  n === lev
-                    ? { background: "var(--accent)", color: "#03131f" }
-                    : { color: "var(--muted)" }
-                }
-              >
-                x{n}
-              </Link>
-            ))}
-          </div>
         </div>
       </header>
 
@@ -344,6 +325,30 @@ export default async function PositionsPage({
       <Disclaimer />
 
       <ProfitFactorHero profitFactor={profitFactor} grossWins={sumWins} grossLosses={sumLosses} closedCount={realized.length} winRate={winRate} wins={wins.length} losses={losses.length} />
+
+      {/* Leverage selector — what-if scaling on per-trade risk size */}
+      <section className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--border)] bg-[var(--panel)] px-5 py-3">
+        <div className="text-sm">
+          <span className="font-bold text-[var(--text)]">מינוף "מה היה אם":</span>{" "}
+          <span className="text-[var(--muted)]">מציג מה התשואה הייתה בסיכון כפול / משולש מהמוצע בעסקאות. R לא משתנה (מדד יחסי).</span>
+        </div>
+        <div className="flex items-center gap-1">
+          {[1, 2, 3].map((n) => (
+            <Link
+              key={n}
+              href={`/positions?${new URLSearchParams({ ...(selected ? { channel: selected } : {}), ...(n === 1 ? {} : { lev: String(n) }) }).toString()}`}
+              className="rounded-lg border px-3 py-1.5 text-sm font-bold transition"
+              style={
+                n === lev
+                  ? { background: "var(--accent)", color: "#03131f", borderColor: "var(--accent)" }
+                  : { color: "var(--muted)", borderColor: "var(--border)" }
+              }
+            >
+              x{n}
+            </Link>
+          ))}
+        </div>
+      </section>
 
       {/* ביצועים — חודש נוכחי (קודם, כי זה הכי חשוב) */}
       {cmPositions.length > 0 && (
@@ -501,7 +506,7 @@ export default async function PositionsPage({
 
       <section>
         <h2 className="mb-3 text-base font-semibold">פירוט עסקאות <span className="text-xs font-normal text-[var(--muted)]">· לחץ על שורה לפתיחת הרגליים</span></h2>
-        <PositionsTable positions={positions} />
+        <PositionsTable positions={positions} channelId={selected ?? null} />
         <RecycleBin
           heading="סל מיחזור — שורות שנמחקו"
           items={deletedSignals.map((s) => ({

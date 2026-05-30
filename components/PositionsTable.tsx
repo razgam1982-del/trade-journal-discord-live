@@ -10,6 +10,7 @@ import { EditablePeak } from "./EditablePeak";
 import { FilledToggle } from "./FilledToggle";
 import { DeleteButton } from "./DeleteButton";
 import { ClosePositionButton } from "./ClosePositionButton";
+import { OpenTradeButton } from "./OpenTradeButton";
 import { useCanEdit } from "@/components/EditMode";
 import { deleteSignal, deletePosition } from "@/app/positions/actions";
 
@@ -300,7 +301,7 @@ function MonthNav({ groups }: { groups: ReturnType<typeof groupByMonth> }) {
   );
 }
 
-export function PositionsTable({ positions }: { positions: Position[] }) {
+export function PositionsTable({ positions, channelId }: { positions: Position[]; channelId?: string | null }) {
   const canEdit = useCanEdit();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [compact, setCompact] = useState(false);
@@ -322,7 +323,8 @@ export function PositionsTable({ positions }: { positions: Position[] }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex justify-end">
+      <div className="flex flex-wrap justify-end gap-2">
+        {channelId && <OpenTradeButton channelId={channelId} />}
         <button
           onClick={() => setCompact((c) => !c)}
           className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-semibold text-[var(--muted)] hover:bg-[rgba(56,189,248,0.08)]"
