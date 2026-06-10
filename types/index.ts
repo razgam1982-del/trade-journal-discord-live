@@ -109,8 +109,11 @@ export interface StockTrade {
 }
 
 // New/edited trade payload (no id/created_at).
-export type StockTradeInput = Omit<StockTrade, 'id' | 'created_at' | 'channel_id' | 'deleted_at'> & {
+// seq is null on create — the service assigns the next sequence number. Passing
+// a real seq overrides it (used when editing an existing trade).
+export type StockTradeInput = Omit<StockTrade, 'id' | 'created_at' | 'channel_id' | 'deleted_at' | 'seq'> & {
   channel_id?: string;
+  seq: number | null;
 };
 
 export interface StockTradeCalc {

@@ -251,7 +251,7 @@ export function StockJournal({ trades }: { trades: StockTrade[] }) {
       risk_dollars: parseFloat(form.risk) || 0,
       entries: formToLegs(form.entries),
       exits: formToLegs(form.exits),
-      seq: editingSeq ?? Number.MAX_SAFE_INTEGER,
+      seq: editingSeq ?? null, // null → service assigns the next sequence (avoids int overflow)
       peak_price: form.peak.trim() !== "" && !isNaN(parseFloat(form.peak)) ? parseFloat(form.peak) : null,
     };
     startTransition(async () => {
