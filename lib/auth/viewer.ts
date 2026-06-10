@@ -20,9 +20,17 @@ export async function isAllowedViewer(): Promise<{ allowed: boolean; ownerBypass
   }
 
   // Public viewer: valid session + still holds the role.
-  const sess = verifySession(jar.get(VIEWER_COOKIE)?.value);
-  if (!sess) return { allowed: false, ownerBypass: false };
+  // A misconfiguration (missing SESSION_SECRET / Discord env) must NOT 500 the
+  // page — it fails closed: deny access and let the caller redirect to /login.
+  // The owner bypass above is unaffected, so the owner can always get back in.
+  try {
+    const sess = verifySession(jar.get(VIEWER_COOKIE)?.value);
+    if (!sess) return { allowed: false, ownerBypass: false };
 
-  const stillMember = await hasRequiredRole(sess.uid);
-  return { allowed: stillMember, ownerBypass: false, uid: sess.uid };
+    const stillMember = await hasRequiredRole(sess.uid);
+    return { allowed: stillMember, ownerBypass: false, uid: sess.uid };
+  } catch (err) {
+    console.error('isAllowedViewer: viewer check failed, denying access:', err);
+    return { allowed: false, ownerBypass: false };
+  }
 }
